@@ -1,0 +1,181 @@
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    gcc \
+    g++ \
+    make \
+    supervisor \
+    nginx \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+
+COPY backend /app/backend
+WORKDIR /app/backend
+RUN mkdir -p ml_models
+
+WORKDIR /app/frontend
+COPY frontend/package.json /app/frontend/
+RUN npm install
+
+COPY frontend /app/frontend
+RUN npm run build
+
+RUN rm /etc/nginx/sites-enabled/default
+
+RUN mkdir -p /etc/nginx/sites-available && cat > /etc/nginx/sites-available/homeguard << 'NGINX_EOF'
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    
+    location / {
+        root /app/frontend/dist;
+        try_files $uri $uri/ /index.html;
+        expires 1h;
+    }
+    
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        root /app/frontend/dist;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /api {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+    
+    location /ws {
+        proxy_pass http://localhost:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+NGINX_EOF
+
+RUN ln -s /etc/nginx/sites-available/homeguard /etc/nginx/sites-enabled/homeguard
+
+RUN mkdir -p /etc/supervisor/conf.d && cat > /etc/supervisor/conf.d/homeguard.conf << 'SUPERVISOR_EOF'
+[supervisord]
+nodaemon=true
+user=root
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:backend]
+command=python -m uvicorn main:app --host 0.0.0.0 --port 8000
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/supervisor/backend.err.log
+stdout_logfile=/var/log/supervisor/backend.out.log
+directory=/app/backend
+environment=PYTHONUNBUFFERED="1",DATABASE_NAME="homeguard",SECRET_KEY="homeguard-secret-key-change-in-production",ENV="production",DEBUG="False"
+
+[program:nginx]
+command=/usr/sbin/nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/supervisor/nginx.err.log
+stdout_logfile=/var/log/supervisor/nginx.out.log
+
+[group:homeguard]
+programs=backend,nginx
+priority=999
+SUPERVISOR_EOF
+
+RUN mkdir -p /var/log/supervisor
+
+RUN cat > /entrypoint.sh << 'ENTRYPOINT_EOF'
+#!/bin/bash
+set -e
+
+echo "Starting HomeGuard..."
+
+# Update supervisor config with environment variables
+cat > /etc/supervisor/conf.d/homeguard.conf << EOF
+[supervisord]
+nodaemon=true
+user=root
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:backend]
+command=python -m uvicorn main:app --host 0.0.0.0 --port 8000
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/supervisor/backend.err.log
+stdout_logfile=/var/log/supervisor/backend.out.log
+directory=/app/backend
+environment=PYTHONUNBUFFERED="1",DATABASE_NAME="${DATABASE_NAME:-homeguard}",SECRET_KEY="${SECRET_KEY:-homeguard-secret-key-change-in-production}",ENV="${ENV:-production}",DEBUG="${DEBUG:-False}",MONGODB_URL="${MONGODB_URL:-mongodb://localhost:27017}"
+
+[program:nginx]
+command=/usr/sbin/nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/supervisor/nginx.err.log
+stdout_logfile=/var/log/supervisor/nginx.out.log
+
+[group:homeguard]
+programs=backend,nginx
+priority=999
+EOF
+
+export MONGODB_URL="${MONGODB_URL:-mongodb://localhost:27017}"
+cd /app/backend
+export PYTHONPATH="/app/backend:${PYTHONPATH}"
+
+MAX_WAIT=60
+WAIT_COUNT=0
+until python - <<'PY'
+import asyncio
+from database.mongodb import connect_db
+asyncio.run(connect_db())
+PY
+do
+  if [ $WAIT_COUNT -ge $MAX_WAIT ]; then
+    echo "MongoDB connection timeout after ${MAX_WAIT} seconds"
+    exit 1
+  fi
+  echo "Waiting for MongoDB... ($((WAIT_COUNT + 2))s)"
+  sleep 2
+  WAIT_COUNT=$((WAIT_COUNT + 2))
+done
+
+echo "MongoDB is ready"
+python init_db.py
+
+echo "Starting supervisord..."
+
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/homeguard.conf
+ENTRYPOINT_EOF
+
+RUN chmod +x /entrypoint.sh
+
+EXPOSE 80 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]
