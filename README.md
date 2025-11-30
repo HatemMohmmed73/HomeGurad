@@ -163,6 +163,11 @@ cp backend/.env.example backend/.env
 # Edit backend/.env with your settings
 ```
 
+3. **Optional: provide device & alert snapshots for demo mode**
+   - Place JSON data in `data/devices.json` and `data/alerts.json` following the provided samples.
+   - The backend reads from those files when `DEVICES_FILE_PATH`/`ALERTS_FILE_PATH` are set (already configured in the compose files).
+   - When deploying elsewhere (e.g., the Orange Pi), copy the updated JSON files into the `data/` directory before running `docker compose`.
+
 3. **Build and run with Docker Compose**
 ```bash
 docker-compose up -d

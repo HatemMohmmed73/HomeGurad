@@ -1,0 +1,30 @@
+{
+  "10.10.0.13": {
+    "ip": "10.10.0.13",
+    "name": "camera",
+    "first_seen": 1763993505.681375,
+    "last_seen": 1764050189.7730014,
+    "status": "normal",
+    "blocked": false,
+    "last_alert_id": null
+  },
+  "10.10.0.11": {
+    "ip": "10.10.0.11",
+    "name": "light",
+    "first_seen": 1763995286.898012,
+    "last_seen": 1764055327.2753515,
+    "status": "normal",
+    "blocked": false,
+    "last_alert_id": null
+  },
+  "fe80::3e6a:d2ff:fe0d:17fa": {
+    "ip": "fe80::3e6a:d2ff:fe0d:17fa",
+    "name": "External/Unknown",
+    "first_seen": 1763998564.4989166,
+    "last_seen": 1764052696.6581948,
+    "status": "normal",
+    "blocked": false,
+    "last_alert_id": null
+  }
+}
+

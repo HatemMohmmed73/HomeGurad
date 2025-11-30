@@ -1,15 +1,134 @@
 """
 Alerts API Routes
 """
-from fastapi import APIRouter, HTTPException, status, Depends, Query
-from typing import List, Optional
+import json
+import logging
+from collections import Counter
 from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Optional
 
-from database.models import Alert, AlertResponse, AlertSeverity, AlertType
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+
+from database.models import AlertResponse, AlertSeverity, AlertType
 from database.mongodb import get_alerts_collection
 from core.security import get_current_user
+from config import settings
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _parse_timestamp(value):
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value)
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            return datetime.utcnow()
+    return datetime.utcnow()
+
+
+def _parse_severity(value: Optional[str]) -> AlertSeverity:
+    try:
+        return AlertSeverity((value or "low").lower())
+    except ValueError:
+        return AlertSeverity.LOW
+
+
+def _load_alerts_from_file(file_path: str) -> Optional[List[AlertResponse]]:
+    path = Path(file_path)
+    if not path.exists():
+        logger.warning("Alerts file %s not found", file_path)
+        return None
+
+    try:
+        raw_alerts = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # pragma: no cover
+        logger.error("Failed to read alerts file %s: %s", file_path, exc)
+        return None
+
+    results: List[AlertResponse] = []
+    for record in raw_alerts:
+        device = record.get("device", {})
+        ip = device.get("ip") or "unknown"
+
+        results.append(
+            AlertResponse(
+                _id=record.get("alert_id") or ip,
+                device_id=ip,
+                device_ip=ip,
+                device_mac=device.get("mac") or ip,
+                alert_type=AlertType.ANOMALY,
+                severity=_parse_severity(record.get("severity")),
+                anomaly_score=float(record.get("anomaly_score") or 0.0),
+                timestamp=_parse_timestamp(record.get("timestamp")),
+                reason=record.get("reason") or "Anomalous activity detected",
+                details={
+                    "device_name": device.get("name"),
+                    "action_taken": record.get("action_taken"),
+                    "status": record.get("status"),
+                },
+                action_taken=json.dumps(record.get("action_taken"))
+                if record.get("action_taken")
+                else None,
+                acknowledged=str(record.get("status") or "").lower() == "acknowledged",
+            )
+        )
+
+    return results
+
+
+def _filter_file_alerts(
+    severity: Optional[AlertSeverity],
+    device_id: Optional[str],
+    days: int,
+    limit: int,
+) -> Optional[List[AlertResponse]]:
+    alerts = _load_alerts_from_file(settings.ALERTS_FILE_PATH)
+    if alerts is None:
+        return None
+
+    start_date = datetime.utcnow() - timedelta(days=days) if days > 0 else None
+    filtered: List[AlertResponse] = []
+    for alert in alerts:
+        if severity and alert.severity != severity:
+            continue
+        if device_id and alert.device_ip != device_id and alert.device_id != device_id:
+            continue
+        if start_date and alert.timestamp < start_date:
+            continue
+        filtered.append(alert)
+
+    filtered.sort(key=lambda a: a.timestamp, reverse=True)
+    return filtered[:limit]
+
+
+def _file_alert_stats(days: int):
+    alerts = _load_alerts_from_file(settings.ALERTS_FILE_PATH)
+    if alerts is None:
+        return None
+
+    start_date = datetime.utcnow() - timedelta(days=days) if days > 0 else None
+    filtered = [
+        alert for alert in alerts
+        if start_date is None or alert.timestamp >= start_date
+    ]
+
+    total_alerts = len(filtered)
+    severity_counts = Counter(alert.severity.value for alert in filtered)
+    type_counts = Counter(alert.alert_type.value for alert in filtered)
+    device_counts = Counter(alert.device_ip for alert in filtered)
+    top_devices = [{"_id": device, "count": count} for device, count in device_counts.most_common(10)]
+
+    return {
+        "total_alerts": total_alerts,
+        "by_severity": dict(severity_counts),
+        "by_type": dict(type_counts),
+        "top_devices": top_devices,
+        "period_days": days,
+    }
 
 
 @router.get("", response_model=List[AlertResponse])
@@ -21,6 +140,11 @@ async def get_alerts(
     current_user: dict = Depends(get_current_user)
 ):
     """Get all alerts with optional filters"""
+    if settings.ALERTS_FILE_PATH:
+        file_alerts = _filter_file_alerts(severity, device_id, days, limit)
+        if file_alerts is not None:
+            return file_alerts
+
     alerts_collection = get_alerts_collection()
     
     # Build query
@@ -52,6 +176,17 @@ async def get_alerts(
 @router.get("/{alert_id}", response_model=AlertResponse)
 async def get_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
     """Get specific alert details"""
+    if settings.ALERTS_FILE_PATH:
+        file_alerts = _load_alerts_from_file(settings.ALERTS_FILE_PATH)
+        if file_alerts is not None:
+            for alert in file_alerts:
+                if alert.id == alert_id:
+                    return alert
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Alert not found"
+            )
+
     alerts_collection = get_alerts_collection()
     
     from bson import ObjectId
@@ -76,6 +211,12 @@ async def get_alert(alert_id: str, current_user: dict = Depends(get_current_user
 @router.patch("/{alert_id}/acknowledge")
 async def acknowledge_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
     """Mark an alert as acknowledged"""
+    if settings.ALERTS_FILE_PATH:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Acknowledging alerts is not supported in file-backed mode"
+        )
+
     alerts_collection = get_alerts_collection()
     
     from bson import ObjectId
@@ -107,6 +248,11 @@ async def get_alert_stats(
     current_user: dict = Depends(get_current_user)
 ):
     """Get alert statistics"""
+    if settings.ALERTS_FILE_PATH:
+        file_stats = _file_alert_stats(days)
+        if file_stats is not None:
+            return file_stats
+
     alerts_collection = get_alerts_collection()
     
     start_date = datetime.utcnow() - timedelta(days=days)
@@ -160,6 +306,12 @@ async def get_alert_stats(
 @router.delete("/{alert_id}")
 async def delete_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
     """Delete an alert"""
+    if settings.ALERTS_FILE_PATH:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Deleting alerts is not supported in file-backed mode"
+        )
+
     alerts_collection = get_alerts_collection()
     
     from bson import ObjectId

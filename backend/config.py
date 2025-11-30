@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     # Database
     MONGODB_URL: str = "mongodb://localhost:27017"
     DATABASE_NAME: str = "homeguard"
+    DEVICES_FILE_PATH: str | None = None
+    ALERTS_FILE_PATH: str | None = None
+    DEVICES_FILE_PATH: str | None = None
     
     # ML Model
     MODEL_PATH: str = "./ml_models/isolation_forest.joblib"

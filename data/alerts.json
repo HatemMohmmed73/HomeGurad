@@ -1,0 +1,75 @@
+[
+  {
+    "alert_id": "ALRT-1764062419",
+    "timestamp": 1764062419.5337718,
+    "device": {
+      "ip": "192.168.100.228",
+      "name": "External/Unknown"
+    },
+    "anomaly_score": -0.28290037167341753,
+    "severity": "High",
+    "reason": "Anomalous traffic behavior detected",
+    "action_taken": {
+      "blocked": true,
+      "block_type": "ip",
+      "duration": "permanent",
+      "rule_id": "successfully!"
+    },
+    "status": "active"
+  },
+  {
+    "alert_id": "ALRT-1764062829",
+    "timestamp": 1764062829.2491891,
+    "device": {
+      "ip": "192.168.100.228",
+      "name": "External/Unknown"
+    },
+    "anomaly_score": -0.28290037167341753,
+    "severity": "High",
+    "reason": "Anomalous traffic behavior detected",
+    "action_taken": {
+      "blocked": true,
+      "block_type": "ip",
+      "duration": "permanent",
+      "rule_id": "successfully!"
+    },
+    "status": "active"
+  },
+  {
+    "alert_id": "ALRT-1764063969",
+    "timestamp": 1764063969.2233171,
+    "device": {
+      "ip": "fe80::3e6a:d2ff:fe0d:17fa",
+      "name": "External/Unknown"
+    },
+    "anomaly_score": -0.28290037167341753,
+    "severity": "High",
+    "reason": "Anomalous traffic behavior detected",
+    "action_taken": {
+      "blocked": true,
+      "block_type": "ip",
+      "duration": "permanent",
+      "rule_id": "successfully!"
+    },
+    "status": "active"
+  },
+  {
+    "alert_id": "ALRT-1764064329",
+    "timestamp": 1764064329.7153316,
+    "device": {
+      "ip": "10.10.0.11",
+      "name": "light"
+    },
+    "anomaly_score": -0.24575980875698877,
+    "severity": "High",
+    "reason": "Anomalous traffic behavior detected",
+    "action_taken": {
+      "blocked": true,
+      "block_type": "ip",
+      "duration": "permanent",
+      "rule_id": "successfully!"
+    },
+    "status": "active"
+  }
+]
+
