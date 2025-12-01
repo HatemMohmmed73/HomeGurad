@@ -60,20 +60,4 @@ async def update_settings(
     return SystemSettings(**settings)
 
 
-@router.post("/reset")
-async def reset_settings(current_user: dict = Depends(get_current_user)):
-    """Reset settings to default"""
-    settings_collection = get_settings_collection()
-    
-    # Delete existing settings
-    await settings_collection.delete_many({})
-    
-    # Create default settings
-    default_settings = SystemSettings()
-    await settings_collection.insert_one(default_settings.dict())
-    
-    return {
-        "message": "Settings reset to default",
-        "settings": default_settings
-    }
 

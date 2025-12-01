@@ -75,12 +75,3 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     )
 
 
-@router.post("/refresh", response_model=Token)
-async def refresh_token(refresh_token: str):
-    """Refresh access token using refresh token"""
-    # Implement refresh token logic
-    # This is a simplified version
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Refresh token not implemented yet"
-    )

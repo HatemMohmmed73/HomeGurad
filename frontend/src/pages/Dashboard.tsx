@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiWifi, 
   FiShield, 
@@ -11,30 +11,103 @@ import {
 import { toast } from 'react-toastify';
 import api from '../services/api';
 import websocket from '../services/websocket';
+import notifications from '../services/notifications';
+import pushSubscription from '../services/pushSubscription';
 import { Device, Alert, DeviceStatus } from '../types';
 import DeviceCard from '../components/DeviceCard';
 import StatsCard from '../components/StatsCard';
+import AlertPopup from '../components/AlertPopup';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [devices, setDevices] = useState<Device[]>([]);
   const [recentAlerts, setRecentAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newAlert, setNewAlert] = useState<Alert | null>(null);
 
   useEffect(() => {
     loadData();
+    
+    // Initialize and subscribe to push notifications
+    const initPushNotifications = async () => {
+      const initialized = await pushSubscription.initialize();
+      if (initialized) {
+        const isSubscribed = await pushSubscription.isSubscribed();
+        if (!isSubscribed) {
+          const subscribed = await pushSubscription.subscribe();
+          if (subscribed) {
+            toast.success('Push notifications enabled! You will receive alerts even when the browser is closed.');
+          } else {
+            toast.info('Enable push notifications to receive alerts when you\'re away');
+          }
+        }
+      }
+    };
+    
+    initPushNotifications();
+    
+    // Also enable browser notifications for when tab is inactive
+    if (notifications.isSupported()) {
+      notifications.requestPermission();
+    }
     
     // Connect to WebSocket for real-time updates
     websocket.connectDevices((data) => {
       updateDevice(data.data);
     });
 
-    websocket.connectAlerts((data) => {
-      toast.warning(`New Alert: ${data.data.reason}`);
-      setRecentAlerts((prev) => [data.data, ...prev.slice(0, 4)]);
+    websocket.connectAlerts((message) => {
+      // Handle WebSocket alert message
+      if (message.type === 'new_alert' && message.data) {
+        const alertData = message.data;
+        
+        // Create Alert object from WebSocket data
+        const newAlertObj: Alert = {
+          _id: alertData.alert_id || alertData.device_ip,
+          device_id: alertData.device_ip,
+          device_ip: alertData.device_ip,
+          device_mac: alertData.device_mac || alertData.device_ip,
+          device_name: alertData.device_name || alertData.device_ip,
+          alert_type: 'anomaly',
+          severity: alertData.severity || 'medium',
+          anomaly_score: alertData.anomaly_score || 0.0,
+          timestamp: alertData.timestamp ? new Date(alertData.timestamp * 1000).toISOString() : new Date().toISOString(),
+          reason: alertData.reason || 'Anomalous activity detected',
+          details: {},
+          action_taken: alertData.action_taken || null,
+          acknowledged: alertData.status === 'acknowledged'
+        };
+        
+        // Show popup notification (when dashboard is open)
+        setNewAlert(newAlertObj);
+        
+        // Show browser notification (works even when tab is not active)
+        notifications.showAlertNotification({
+          reason: newAlertObj.reason,
+          device_name: newAlertObj.device_name,
+          severity: newAlertObj.severity,
+          alert_id: newAlertObj._id,
+        });
+        
+        // Show toast notification
+        toast.warning(`New Alert: ${newAlertObj.reason}`, {
+          position: 'top-right',
+          autoClose: 5000,
+        });
+        
+        // Update recent alerts list
+        setRecentAlerts((prev) => [newAlertObj, ...prev.slice(0, 4)]);
+      }
     });
+
+    // Poll for updates every 5 seconds (for file-based data)
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 5000);
 
     return () => {
       websocket.disconnectAll();
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -76,7 +149,15 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <>
+      {/* Alert Popup Notification */}
+      <AlertPopup
+        alert={newAlert}
+        onClose={() => setNewAlert(null)}
+        onViewDetails={() => navigate('/alerts')}
+      />
+      
+      <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="mb-4 sm:mb-6">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-1 sm:mb-2">Dashboard</h1>
@@ -170,6 +251,7 @@ const Dashboard = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

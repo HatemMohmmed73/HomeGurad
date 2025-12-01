@@ -173,41 +173,6 @@ async def get_alerts(
     return alerts
 
 
-@router.get("/{alert_id}", response_model=AlertResponse)
-async def get_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
-    """Get specific alert details"""
-    if settings.ALERTS_FILE_PATH:
-        file_alerts = _load_alerts_from_file(settings.ALERTS_FILE_PATH)
-        if file_alerts is not None:
-            for alert in file_alerts:
-                if alert.id == alert_id:
-                    return alert
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Alert not found"
-            )
-
-    alerts_collection = get_alerts_collection()
-    
-    from bson import ObjectId
-    try:
-        alert = await alerts_collection.find_one({"_id": ObjectId(alert_id)})
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid alert ID"
-        )
-    
-    if not alert:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Alert not found"
-        )
-    
-    alert["_id"] = str(alert["_id"])
-    return alert
-
-
 @router.patch("/{alert_id}/acknowledge")
 async def acknowledge_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
     """Mark an alert as acknowledged"""
@@ -303,33 +268,4 @@ async def get_alert_stats(
     }
 
 
-@router.delete("/{alert_id}")
-async def delete_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
-    """Delete an alert"""
-    if settings.ALERTS_FILE_PATH:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Deleting alerts is not supported in file-backed mode"
-        )
-
-    alerts_collection = get_alerts_collection()
-    
-    from bson import ObjectId
-    try:
-        obj_id = ObjectId(alert_id)
-    except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid alert ID"
-        )
-    
-    result = await alerts_collection.delete_one({"_id": obj_id})
-    
-    if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Alert not found"
-        )
-    
-    return {"message": "Alert deleted successfully"}
 

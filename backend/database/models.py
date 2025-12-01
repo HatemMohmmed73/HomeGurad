@@ -48,21 +48,21 @@ class Device(BaseModel):
     ip: str = Field(..., description="IP address")
     hostname: Optional[str] = Field(None, description="Device hostname")
     device_type: Optional[str] = Field("unknown", description="Device type")
-    status: DeviceStatus = Field(DeviceStatus.ACTIVE, description="Device status")
+    status: DeviceStatus = Field(DeviceStatus.IDLE, description="Device status")
     first_seen: datetime = Field(default_factory=datetime.utcnow)
     last_seen: datetime = Field(default_factory=datetime.utcnow)
     total_bytes_sent: int = Field(0, description="Total bytes sent")
     total_bytes_received: int = Field(0, description="Total bytes received")
-    packet_count: int = Field(0, description="Total packets")
-    behavioral_score: float = Field(0.0, description="Anomaly score from ML model")
-    is_blocked: bool = Field(False, description="Whether device is blocked")
-    is_running: bool = Field(True, description="Whether device is running")
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    packet_count: int = Field(0, description="Total packet count")
+    behavioral_score: float = Field(0.0, description="Anomaly score (0-1)")
+    is_blocked: bool = Field(False, description="Is device blocked")
+    is_running: bool = Field(True, description="Is device running")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
 class DeviceResponse(Device):
     """Device response with ID"""
-    id: str = Field(..., alias="_id")
+    _id: str = Field(..., description="Device ID")
 
     class Config:
         populate_by_name = True
@@ -167,6 +167,28 @@ class TokenData(BaseModel):
     email: Optional[str] = None
 
 
+# ============= Push Notification Models =============
+
+class PushSubscription(BaseModel):
+    """Web Push Subscription Model"""
+    user_email: str = Field(..., description="User email who owns this subscription")
+    endpoint: str = Field(..., description="Push service endpoint URL")
+    keys: Dict[str, str] = Field(..., description="Encryption keys (p256dh, auth)")
+    user_agent: Optional[str] = Field(None, description="Browser user agent")
+    device_info: Optional[Dict[str, Any]] = Field(None, description="Device information")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_used: datetime = Field(default_factory=datetime.utcnow)
+    is_active: bool = Field(True, description="Is subscription active")
+
+
+class PushSubscriptionCreate(BaseModel):
+    """Push subscription creation model"""
+    endpoint: str = Field(..., description="Push service endpoint URL")
+    keys: Dict[str, str] = Field(..., description="Encryption keys")
+    user_agent: Optional[str] = None
+    device_info: Optional[Dict[str, Any]] = None
+
+
 # ============= Settings Models =============
 
 class SystemSettings(BaseModel):
@@ -237,28 +259,3 @@ class SecurityAlert(BaseModel):
     ip_address: str = Field(..., description="IP address of the user")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     details: Dict[str, Any] = Field(default_factory=dict)
-    acknowledged: bool = Field(False)
-
-
-class SecurityAlertResponse(SecurityAlert):
-    """Security alert response with ID"""
-    id: str = Field(..., alias="_id")
-
-    class Config:
-        populate_by_name = True
-
-
-class SecurityLog(BaseModel):
-    """Security log model"""
-    action: str = Field(..., description="Action performed")
-    user_email: str = Field(..., description="User who performed action")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    details: Dict[str, Any] = Field(default_factory=dict)
-
-
-class SecurityLogResponse(SecurityLog):
-    """Security log response with ID"""
-    id: str = Field(..., alias="_id")
-
-    class Config:
-        populate_by_name = True

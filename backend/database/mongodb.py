@@ -66,3 +66,8 @@ def get_security_logs_collection():
     """Get security logs collection"""
     return database.security_logs
 
+
+def get_push_subscriptions_collection():
+    """Get push subscriptions collection"""
+    return database.push_subscriptions
+

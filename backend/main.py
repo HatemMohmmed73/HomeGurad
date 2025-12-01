@@ -9,7 +9,8 @@ from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 
 from database.mongodb import connect_db, close_db
-from api.routes import auth, devices, alerts, model as model_routes, settings_api, security
+from api.routes import auth, devices, alerts, model as model_routes, settings_api, websocket as websocket_routes, push
+from core.alert_monitor import alert_monitor
 
 # ============= Lifespan Context Manager =============
 
@@ -18,8 +19,11 @@ async def lifespan(app: FastAPI):
     """Manage app startup and shutdown"""
     # Startup
     await connect_db()
+    # Start alert monitoring
+    alert_monitor.start()
     yield
     # Shutdown
+    alert_monitor.monitoring = False
     await close_db()
 
 
@@ -136,14 +140,19 @@ app.include_router(
     }
 )
 
+# WebSocket routes (no prefix, direct paths)
+app.include_router(websocket_routes.router)
+
+# Push notification routes
 app.include_router(
-    security.router,
-    prefix="/api/security",
-    tags=["🛡️ Security"],
+    push.router,
+    prefix="/api/push",
+    tags=["📱 Push Notifications"],
     responses={
         401: {"description": "Unauthorized"},
     }
 )
+
 
 # ============= Health Check Endpoint =============
 

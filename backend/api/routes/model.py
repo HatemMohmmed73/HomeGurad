@@ -21,22 +21,6 @@ async def get_model_status(current_user: dict = Depends(get_current_user)):
     return status
 
 
-@router.post("/inference", response_model=AnomalyResult)
-async def run_inference(
-    features: FlowFeatures,
-    current_user: dict = Depends(get_current_user)
-):
-    """Run anomaly detection on flow features"""
-    try:
-        result = detector.predict(features.dict())
-        return result
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Inference failed: {str(e)}"
-        )
-
-
 @router.post("/retrain")
 async def retrain_model(current_user: dict = Depends(get_current_user)):
     """Trigger model retraining"""
@@ -51,13 +35,6 @@ async def retrain_model(current_user: dict = Depends(get_current_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Retraining failed: {str(e)}"
         )
-
-
-@router.get("/metrics")
-async def get_model_metrics(current_user: dict = Depends(get_current_user)):
-    """Get model performance metrics"""
-    metrics = detector.get_metrics()
-    return metrics
 
 
 @router.post("/threshold")

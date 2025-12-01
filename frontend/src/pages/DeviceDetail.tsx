@@ -22,6 +22,15 @@ const DeviceDetail = () => {
 
   useEffect(() => {
     loadDeviceData();
+    
+    // Poll for updates every 5 seconds (for file-based data)
+    const pollInterval = setInterval(() => {
+      loadDeviceData();
+    }, 5000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
   }, [deviceId]);
 
   const loadDeviceData = async () => {

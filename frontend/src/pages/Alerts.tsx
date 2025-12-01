@@ -17,6 +17,15 @@ const Alerts = () => {
 
   useEffect(() => {
     loadData();
+    
+    // Poll for updates every 5 seconds (for file-based data)
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 5000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
   }, [filter, days]);
 
   const loadData = async () => {
