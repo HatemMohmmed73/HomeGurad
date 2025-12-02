@@ -15,7 +15,7 @@ const Login = () => {
   // Redirect to appropriate dashboard if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/', { replace: true });
+        navigate('/', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -26,8 +26,8 @@ const Login = () => {
 
     try {
       await login(email, password);
-      navigate('/', { replace: true });
-      toast.success('✅ Login successful!');
+          navigate('/', { replace: true });
+        toast.success('✅ Login successful!');
     } catch (error: any) {
       const errorMsg = error.response?.data?.detail || error.message || 'Login failed';
       setError(errorMsg);

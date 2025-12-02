@@ -24,9 +24,15 @@ def _parse_timestamp(value):
         return datetime.fromtimestamp(value)
     if isinstance(value, str):
         try:
+            # Try ISO format first
             return datetime.fromisoformat(value)
         except ValueError:
-            return datetime.utcnow()
+            try:
+                # Try "YYYY-MM-DD HH:MM:SS" format
+                return datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                logger.warning("Could not parse timestamp: %s, using current time", value)
+                return datetime.utcnow()
     return datetime.utcnow()
 
 
@@ -44,9 +50,18 @@ def _load_alerts_from_file(file_path: str) -> Optional[List[AlertResponse]]:
         return None
 
     try:
-        raw_alerts = json.loads(path.read_text(encoding="utf-8"))
+        raw_data = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:  # pragma: no cover
         logger.error("Failed to read alerts file %s: %s", file_path, exc)
+        return None
+
+    # Handle both single object and array formats
+    if isinstance(raw_data, dict):
+        raw_alerts = [raw_data]
+    elif isinstance(raw_data, list):
+        raw_alerts = raw_data
+    else:
+        logger.error("Alerts file must contain a JSON object or array, got %s", type(raw_data))
         return None
 
     results: List[AlertResponse] = []
@@ -67,11 +82,11 @@ def _load_alerts_from_file(file_path: str) -> Optional[List[AlertResponse]]:
                 reason=record.get("reason") or "Anomalous activity detected",
                 details={
                     "device_name": device.get("name"),
-                    "action_taken": record.get("action_taken"),
+                    "action_taken": record.get("action") or record.get("action_taken"),
                     "status": record.get("status"),
                 },
-                action_taken=json.dumps(record.get("action_taken"))
-                if record.get("action_taken")
+                action_taken=json.dumps(record.get("action") or record.get("action_taken"))
+                if (record.get("action") or record.get("action_taken"))
                 else None,
                 acknowledged=str(record.get("status") or "").lower() == "acknowledged",
             )

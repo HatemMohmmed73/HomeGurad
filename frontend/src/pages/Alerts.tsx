@@ -36,7 +36,12 @@ const Alerts = () => {
         api.get(`/alerts/stats/summary?days=${days}`),
       ]);
 
-      setAlerts(alertsRes.data);
+      // Map alerts to include device_name from details
+      const mappedAlerts = alertsRes.data.map((alert: Alert) => ({
+        ...alert,
+        device_name: alert.details?.device_name || alert.device_ip || 'Unknown Device',
+      }));
+      setAlerts(mappedAlerts);
       setStats(statsRes.data);
     } catch (error) {
       toast.error('Failed to load alerts');

@@ -31,7 +31,7 @@ class WebSocketManager:
                 self.active_connections[channel].remove(websocket)
                 print(f"❌ WebSocket disconnected from channel: {channel}")
     
-        async def broadcast_to_channel(self, channel: str, message: dict):
+    async def broadcast_to_channel(self, channel: str, message: dict):
         """Broadcast message to all connections in a channel"""
         if channel not in self.active_connections:
             return

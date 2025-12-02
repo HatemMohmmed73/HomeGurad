@@ -43,6 +43,7 @@ export interface Alert {
   device_id: string;
   device_ip: string;
   device_mac: string;
+  device_name?: string; // Device name (may be in details.device_name from API)
   alert_type: AlertType;
   severity: AlertSeverity;
   anomaly_score: number;

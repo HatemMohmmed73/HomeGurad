@@ -22,24 +22,29 @@ class AlertMonitor:
         self.last_alert_ids: Set[str] = set()
         self.monitoring = False
         self.file_path: Optional[Path] = None
+        self._monitor_task: Optional[asyncio.Task] = None
         
-    def start(self):
+    async def start(self):
         """Start monitoring alerts file"""
-        if not settings.ALERTS_FILE_PATH:
-            logger.warning("ALERTS_FILE_PATH not configured, alert monitoring disabled")
-            return
-        
-        self.file_path = Path(settings.ALERTS_FILE_PATH)
-        if not self.file_path.exists():
-            logger.warning(f"Alerts file not found: {self.file_path}")
-            return
-        
-        self.monitoring = True
-        # Load initial alerts
-        self._load_initial_alerts()
-        # Start monitoring task
-        asyncio.create_task(self._monitor_loop())
-        logger.info(f"Alert monitoring started for {self.file_path}")
+        try:
+            if not settings.ALERTS_FILE_PATH:
+                logger.warning("ALERTS_FILE_PATH not configured, alert monitoring disabled")
+                return
+            
+            self.file_path = Path(settings.ALERTS_FILE_PATH)
+            if not self.file_path.exists():
+                logger.warning(f"Alerts file not found: {self.file_path}")
+                return
+            
+            self.monitoring = True
+            # Load initial alerts
+            self._load_initial_alerts()
+            # Start monitoring task - store it to prevent garbage collection
+            self._monitor_task = asyncio.create_task(self._monitor_loop())
+            logger.info(f"Alert monitoring started for {self.file_path}")
+        except Exception as e:
+            logger.error(f"Error starting alert monitor: {e}", exc_info=True)
+            # Don't crash the app if monitoring fails to start
     
     def _load_initial_alerts(self):
         """Load existing alerts to track which ones are new"""

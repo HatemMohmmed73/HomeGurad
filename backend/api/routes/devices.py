@@ -56,7 +56,7 @@ def _load_devices_from_file(file_path: str) -> Optional[List[DeviceResponse]]:
 
         devices.append(
             DeviceResponse(
-                _id=ip,
+                id=ip,
                 mac=record.get("mac") or ip,
                 ip=ip,
                 hostname=record.get("name"),
@@ -103,7 +103,7 @@ async def get_device(device_id: str, current_user: dict = Depends(get_current_us
         file_devices = _load_devices_from_file(settings.DEVICES_FILE_PATH)
         if file_devices is not None:
             for device in file_devices:
-                if device.ip == device_id or device.mac == device_id or str(device._id) == device_id:
+                if device.ip == device_id or device.mac == device_id or str(device.id) == device_id:
                     return device
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -132,7 +132,7 @@ async def get_device(device_id: str, current_user: dict = Depends(get_current_us
 
 @router.post("/{device_id}/block")
 async def block_device(
-    device_id: str,
+    device_id: str, 
     current_user: dict = Depends(require_admin)
 ):
     """Block a device (Admin only)"""
@@ -189,7 +189,7 @@ async def block_device(
 
 @router.post("/{device_id}/unblock")
 async def unblock_device(
-    device_id: str,
+    device_id: str, 
     current_user: dict = Depends(require_admin)
 ):
     """Unblock a device (Admin only)"""

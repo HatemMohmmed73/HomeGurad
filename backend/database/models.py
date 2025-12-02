@@ -62,7 +62,7 @@ class Device(BaseModel):
 
 class DeviceResponse(Device):
     """Device response with ID"""
-    _id: str = Field(..., description="Device ID")
+    id: str = Field(..., alias="_id", description="Device ID")
 
     class Config:
         populate_by_name = True

@@ -27,7 +27,7 @@ class WebSocketService {
     this.alertSocket = new WebSocket(url);
 
     this.alertSocket.onopen = () => {
-      console.log('✅ Connected to alerts WebSocket');
+        console.log('✅ Connected to alerts WebSocket');
       if (this.alertReconnectInterval) {
         clearInterval(this.alertReconnectInterval);
         this.alertReconnectInterval = null;
@@ -54,7 +54,7 @@ class WebSocketService {
     };
 
     this.alertSocket.onclose = () => {
-      console.log('❌ Disconnected from alerts WebSocket');
+        console.log('❌ Disconnected from alerts WebSocket');
       // Attempt to reconnect after 5 seconds
       if (!this.alertReconnectInterval) {
         this.alertReconnectInterval = setInterval(() => {
@@ -62,7 +62,7 @@ class WebSocketService {
             this.connectAlerts(onAlert);
           }
         }, 5000);
-      }
+    }
     };
   }
 
@@ -80,7 +80,7 @@ class WebSocketService {
     this.deviceSocket = new WebSocket(url);
 
     this.deviceSocket.onopen = () => {
-      console.log('✅ Connected to devices WebSocket');
+        console.log('✅ Connected to devices WebSocket');
       if (this.deviceReconnectInterval) {
         clearInterval(this.deviceReconnectInterval);
         this.deviceReconnectInterval = null;
@@ -103,7 +103,7 @@ class WebSocketService {
     };
 
     this.deviceSocket.onclose = () => {
-      console.log('❌ Disconnected from devices WebSocket');
+        console.log('❌ Disconnected from devices WebSocket');
       // Attempt to reconnect after 5 seconds
       if (!this.deviceReconnectInterval) {
         this.deviceReconnectInterval = setInterval(() => {
@@ -111,7 +111,7 @@ class WebSocketService {
             this.connectDevices(onDeviceUpdate);
           }
         }, 5000);
-      }
+    }
     };
   }
 

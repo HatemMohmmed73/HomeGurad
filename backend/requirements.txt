@@ -34,5 +34,5 @@ pydantic-settings>=2.6.0
 
 # Web Push Notifications
 pywebpush==1.14.0
-py-vapid==1.11.0
+py-vapid==1.9.2
 

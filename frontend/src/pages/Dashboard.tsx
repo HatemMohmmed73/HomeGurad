@@ -115,11 +115,16 @@ const Dashboard = () => {
     try {
       const [devicesRes, alertsRes] = await Promise.all([
         api.get('/devices'),
-        api.get('/alerts?limit=5'),
+        api.get('/alerts?limit=5&days=30'),
       ]);
 
       setDevices(devicesRes.data);
-      setRecentAlerts(alertsRes.data);
+      // Map alerts to include device_name from details
+      const mappedAlerts = alertsRes.data.map((alert: Alert) => ({
+        ...alert,
+        device_name: alert.details?.device_name || alert.device_ip || 'Unknown Device',
+      }));
+      setRecentAlerts(mappedAlerts);
     } catch (error) {
       toast.error('Failed to load data');
     } finally {
@@ -157,7 +162,7 @@ const Dashboard = () => {
         onViewDetails={() => navigate('/alerts')}
       />
       
-      <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="mb-4 sm:mb-6">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-1 sm:mb-2">Dashboard</h1>

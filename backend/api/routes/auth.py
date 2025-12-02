@@ -41,7 +41,7 @@ async def login(credentials: UserLogin):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrator access only"
-        )
+    )
     
     # Create tokens
     access_token = create_access_token(

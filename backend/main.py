@@ -9,7 +9,7 @@ from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 
 from database.mongodb import connect_db, close_db
-from api.routes import auth, devices, alerts, model as model_routes, settings_api, websocket as websocket_routes, push
+from api.routes import auth, devices, alerts, settings_api, websocket as websocket_routes, push
 from core.alert_monitor import alert_monitor
 
 # ============= Lifespan Context Manager =============
@@ -18,9 +18,19 @@ from core.alert_monitor import alert_monitor
 async def lifespan(app: FastAPI):
     """Manage app startup and shutdown"""
     # Startup
-    await connect_db()
-    # Start alert monitoring
-    alert_monitor.start()
+    try:
+        await connect_db()
+        # Start alert monitoring (non-blocking, don't fail if it errors)
+        try:
+            await alert_monitor.start()
+        except Exception as e:
+            print(f"⚠️  Warning: Alert monitoring failed to start: {e}")
+            # Don't crash the app if monitoring fails
+    except Exception as e:
+        print(f"❌ Error during startup: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     yield
     # Shutdown
     alert_monitor.monitoring = False
@@ -121,15 +131,6 @@ app.include_router(
     }
 )
 
-app.include_router(
-    model_routes.router,
-    prefix="/api/model",
-    tags=["🤖 ML Model & Inference"],
-    responses={
-        401: {"description": "Unauthorized"},
-        500: {"description": "Model inference failed"},
-    }
-)
 
 app.include_router(
     settings_api.router,

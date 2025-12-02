@@ -18,6 +18,9 @@ services:
       start_period: 60s
 
   homeguard:
+    build:
+      context: .
+      dockerfile: Dockerfile.allinone
     image: gameover9600/homeguard:latest
     container_name: homeguard-allinone
     restart: unless-stopped
@@ -43,8 +46,8 @@ services:
       retries: 3
       start_period: 60s
     volumes:
-      - ./data/devices.json:/data/devices.json:ro
-      - ./data/alerts.json:/data/alerts.json:ro
+      - /home/orangepi/homeguard/data/devices.json:/data/devices.json:ro
+      - /home/orangepi/homeguard/data/alerts.json:/data/alerts.json:ro
 
 volumes:
   homeguard_data:
