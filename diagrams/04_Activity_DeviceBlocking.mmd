@@ -1,0 +1,58 @@
+```mermaid
+flowchart TD
+    Start([Administrator views device]) --> Identify[Identifies suspicious device]
+    Identify --> Click[Clicks Block Device button]
+    Click --> Send[Frontend sends POST /api/devices/id/block]
+    Send --> Receive[Backend receives request]
+    Receive --> Validate[Backend validates JWT token]
+    
+    Validate --> CheckToken{Token valid?}
+    CheckToken -->|No| Error1[Return 401 Unauthorized]
+    Error1 --> End1([End])
+    
+    CheckToken -->|Yes| CheckRole[Backend checks user role]
+    CheckRole --> CheckAdmin{User is admin?}
+    CheckAdmin -->|No| Error2[Return 403 Forbidden]
+    Error2 --> End2([End])
+    
+    CheckAdmin -->|Yes| Query[Backend queries device by ID/IP/MAC]
+    Query --> CheckDevice{Device found?}
+    CheckDevice -->|No| Error3[Return 404 Not Found]
+    Error3 --> End3([End])
+    
+    CheckDevice -->|Yes| Firewall[FirewallController.block_device]
+    Firewall --> CreateRule[Create nftables rule: drop IP]
+    CreateRule --> CreateMAC[Create nftables rule: drop MAC]
+    CreateMAC --> StoreBlock[Store blocked device in memory]
+    
+    StoreBlock --> CheckFirewall{Firewall rule created?}
+    CheckFirewall -->|No| Error4[Return 500 Internal Server Error]
+    Error4 --> End4([End])
+    
+    CheckFirewall -->|Yes| UpdateDB[Update device status to BLOCKED]
+    UpdateDB --> SetBlocked[Set is_blocked = true]
+    SetBlocked --> UpdateTime[Update last_seen timestamp]
+    
+    UpdateTime --> FormatWS[Format device update for WebSocket]
+    FormatWS --> SendWS[Send to WebSocket Manager]
+    SendWS --> Broadcast[Broadcast to /ws/devices channel]
+    Broadcast --> ReceiveWS[Frontend receives update]
+    ReceiveWS --> UpdateUI[Update device status in dashboard]
+    
+    UpdateUI --> Return[Return success response]
+    Return --> Display[Display success message]
+    Display --> Success([Device status: BLOCKED])
+    
+    style Start fill:#E8F5E9,stroke:#4CAF50
+    style Success fill:#C8E6C9,stroke:#4CAF50
+    style Error1 fill:#FFCDD2,stroke:#F44336
+    style Error2 fill:#FFCDD2,stroke:#F44336
+    style Error3 fill:#FFCDD2,stroke:#F44336
+    style Error4 fill:#FFCDD2,stroke:#F44336
+    style CheckToken fill:#FFF9C4,stroke:#FBC02D
+    style CheckAdmin fill:#FFF9C4,stroke:#FBC02D
+    style CheckDevice fill:#FFF9C4,stroke:#FBC02D
+    style CheckFirewall fill:#FFF9C4,stroke:#FBC02D
+
+```
+

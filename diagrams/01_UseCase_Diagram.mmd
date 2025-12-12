@@ -1,0 +1,57 @@
+```mermaid
+graph TB
+    Admin[👤 Administrator]
+    
+    subgraph System["HomeGuard System"]
+        direction TB
+        
+        subgraph Auth["Authentication"]
+            UC1[UC-1: Login to Dashboard]
+            UC2[UC-2: View User Profile]
+        end
+        
+        subgraph Devices["Device Management"]
+            UC3[UC-3: View Device List]
+            UC4[UC-4: View Device Details]
+            UC5[UC-5: Block Device]
+            UC6[UC-6: Unblock Device]
+        end
+        
+        subgraph Alerts["Alert Management"]
+            UC7[UC-7: View Alerts]
+            UC8[UC-8: Acknowledge Alert]
+            UC9[UC-9: View Alert Statistics]
+            UC10[UC-10: Receive Real-time Alert]
+        end
+        
+        subgraph Settings["System Settings"]
+            UC11[UC-11: Configure Settings]
+            UC12[UC-12: View Settings]
+        end
+    end
+    
+    Admin -->|authenticates| UC1
+    Admin --> UC2
+    Admin -->|monitors| UC3
+    Admin -->|views details| UC4
+    Admin -->|manages security| UC5
+    Admin -->|manages security| UC6
+    Admin -->|monitors| UC7
+    Admin -->|manages| UC8
+    Admin -->|analyzes| UC9
+    Admin -->|receives| UC10
+    Admin -->|configures| UC11
+    Admin -->|views| UC12
+    
+    UC10 -.->|extends| UC7
+    UC4 -.->|extends| UC3
+    
+    style Admin fill:#4A90E2,stroke:#2E5C8A,color:#fff
+    style System fill:#F5F5F5,stroke:#333
+    style Auth fill:#E8F4F8,stroke:#2E5C8A
+    style Devices fill:#E8F5E9,stroke:#4CAF50
+    style Alerts fill:#FFF3E0,stroke:#FF9800
+    style Settings fill:#F3E5F5,stroke:#9C27B0
+
+```
+

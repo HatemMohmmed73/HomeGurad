@@ -1,0 +1,94 @@
+@startuml Use Case Diagram - HomeGuard System
+!theme plain
+skinparam actorStyle awesome
+skinparam useCaseStyle rectangle
+skinparam packageStyle rectangle
+skinparam package {
+  BackgroundColor<<Authentication>> #E8F4F8
+  BackgroundColor<<DeviceManagement>> #E8F5E9
+  BackgroundColor<<AlertManagement>> #FFF3E0
+  BackgroundColor<<Settings>> #F3E5F5
+  BorderColor #2E5C8A
+}
+
+left to right direction
+
+actor "Administrator" as Admin
+
+package "HomeGuard System" {
+  
+  package "Authentication" <<Authentication>> {
+    usecase "UC-1: Login to Dashboard" as UC1
+    usecase "UC-2: View User Profile" as UC2
+  }
+  
+  package "Device Management" <<DeviceManagement>> {
+    usecase "UC-3: View Device List" as UC3
+    usecase "UC-4: View Device Details" as UC4
+    usecase "UC-5: Block Device" as UC5
+    usecase "UC-6: Unblock Device" as UC6
+  }
+  
+  package "Alert Management" <<AlertManagement>> {
+    usecase "UC-7: View Alerts" as UC7
+    usecase "UC-8: Acknowledge Alert" as UC8
+    usecase "UC-9: View Alert Statistics" as UC9
+    usecase "UC-10: Receive Real-time Alert" as UC10
+  }
+  
+  package "System Settings" <<Settings>> {
+    usecase "UC-11: Configure Settings" as UC11
+    usecase "UC-12: View Settings" as UC12
+  }
+}
+
+' Primary Relationships - Authentication
+Admin --> UC1 : <<authenticates>>
+Admin --> UC2 : <<views>>
+
+' Primary Relationships - Device Management
+Admin --> UC3 : <<monitors>>
+Admin --> UC4 : <<views details>>
+Admin --> UC5 : <<manages security>>
+Admin --> UC6 : <<manages security>>
+
+' Primary Relationships - Alert Management
+Admin --> UC7 : <<monitors>>
+Admin --> UC8 : <<manages>>
+Admin --> UC9 : <<analyzes>>
+Admin --> UC10 : <<receives>>
+
+' Primary Relationships - Settings
+Admin --> UC11 : <<configures>>
+Admin --> UC12 : <<views>>
+
+' Extend Relationships (Dashed arrows)
+UC10 ..> UC7 : <<extends>>
+UC4 ..> UC3 : <<extends>>
+
+' Notes with better positioning
+note right of UC1
+  <b>Authentication Process</b>
+  Administrator authenticates
+  using email and password
+  to access the system
+end note
+
+note right of UC5
+  <b>Security Enforcement</b>
+  Administrator manually blocks
+  a suspicious device.
+  System updates firewall rules
+  via nftables.
+end note
+
+note right of UC10
+  <b>Real-time Notification</b>
+  System automatically notifies
+  administrator when new
+  alerts are detected via
+  WebSocket and Push notifications.
+end note
+
+@enduml
+

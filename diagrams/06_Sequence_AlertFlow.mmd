@@ -1,0 +1,50 @@
+```mermaid
+sequenceDiagram
+    participant Admin as Administrator
+    participant OrangePi as Orange Pi Monitoring
+    participant File as alerts.json File
+    participant Monitor as Alert Monitor Service
+    participant WS as WebSocket Manager
+    participant Push as Push Notification Service
+    participant Frontend as Frontend Dashboard
+    participant DB as MongoDB
+    
+    Note over OrangePi,File: Alert Detection
+    OrangePi->>OrangePi: Detect anomaly in traffic
+    OrangePi->>File: Write new alert to alerts.json
+    
+    Note over Monitor,File: File Monitoring
+    Monitor->>File: Check file modification (every 2s)
+    File-->>Monitor: File modified
+    Monitor->>File: Read alerts.json
+    File-->>Monitor: Return alert data
+    Monitor->>Monitor: Compare alert IDs
+    Monitor->>Monitor: Identify new alerts
+    
+    Note over Monitor,Frontend: WebSocket Notification
+    Monitor->>WS: Send alert data
+    WS->>Frontend: Broadcast to /ws/alerts channel
+    Frontend->>Frontend: Display alert popup
+    Frontend->>Frontend: Show browser notification
+    Frontend->>Frontend: Update alerts list
+    Frontend->>Frontend: Show toast notification
+    
+    Note over Monitor,DB: Push Notification
+    Monitor->>Push: Send alert for push notification
+    Push->>DB: Get active subscriptions
+    DB-->>Push: Return subscriptions list
+    loop For each subscription
+        Push->>Push: Send push notification
+        Push->>Push: Update last_used timestamp
+    end
+    
+    Note over Admin,DB: User Interaction
+    Admin->>Frontend: Views alert in dashboard
+    Frontend->>Admin: Display alert details
+    Admin->>Frontend: Clicks "Acknowledge"
+    Frontend->>DB: PATCH /api/alerts/{id}/acknowledge
+    DB-->>Frontend: Confirmation
+    Frontend->>Admin: Alert marked as acknowledged
+
+```
+
