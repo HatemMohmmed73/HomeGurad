@@ -2,7 +2,7 @@
 Configuration settings for HomeGuard backend
 """
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 import os
 
 
@@ -25,13 +25,6 @@ class Settings(BaseSettings):
     DATABASE_NAME: str = "homeguard"
     DEVICES_FILE_PATH: str | None = None
     ALERTS_FILE_PATH: str | None = None
-    DEVICES_FILE_PATH: str | None = None
-    
-    # ML Model
-    MODEL_PATH: str = "./ml_models/isolation_forest.joblib"
-    SCALER_PATH: str = "./ml_models/scaler.joblib"
-    ANOMALY_THRESHOLD: float = 0.5
-    AUTO_BLOCK_ENABLED: bool = False
     
     # Zeek Integration
     ZEEK_LOG_PATH: str = "/var/log/zeek"
@@ -44,6 +37,14 @@ class Settings(BaseSettings):
     # Firewall
     NFTABLES_TABLE: str = "homeguard"
     NFTABLES_CHAIN: str = "blocked_devices"
+
+    # Email Settings
+    EMAIL_HOST: str = "smtp.gmail.com"
+    EMAIL_PORT: int = 587
+    EMAIL_USER: Optional[str] = None
+    EMAIL_PASSWORD: Optional[str] = None
+    EMAIL_FROM: str = "noreply@homeguard.local"
+    EMAIL_ENABLED: bool = False
     
     class Config:
         env_file = ".env"
@@ -51,4 +52,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-

@@ -6,7 +6,8 @@
     "last_seen": 1764050189.7730014,
     "status": "normal",
     "blocked": false,
-    "last_alert_id": null
+    "last_alert_id": null,
+    "mac": "10.10.0.13"
   },
   "10.10.0.11": {
     "ip": "10.10.0.11",
@@ -15,7 +16,8 @@
     "last_seen": 1764055327.2753515,
     "status": "normal",
     "blocked": false,
-    "last_alert_id": null
+    "last_alert_id": null,
+    "mac": "10.10.0.11"
   },
   "fe80::3e6a:d2ff:fe0d:17fa": {
     "ip": "fe80::3e6a:d2ff:fe0d:17fa",
@@ -24,7 +26,7 @@
     "last_seen": 1764052696.6581948,
     "status": "normal",
     "blocked": false,
-    "last_alert_id": null
+    "last_alert_id": null,
+    "mac": "fe80::3e6a:d2ff:fe0d:17fa"
   }
 }
-

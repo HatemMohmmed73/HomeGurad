@@ -9,7 +9,7 @@ from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 
 from database.mongodb import connect_db, close_db
-from api.routes import auth, devices, alerts, settings_api, websocket as websocket_routes, push
+from api.routes import auth, devices, alerts, users, websocket as websocket_routes
 from core.alert_monitor import alert_monitor
 
 # ============= Lifespan Context Manager =============
@@ -44,16 +44,14 @@ app = FastAPI(
     description="""
 🛡️ **HomeGuard: Per-Device Behavioral Firewall for Smart Homes**
 
-A comprehensive AI-powered network monitoring and device management system for smart homes.
-Detects anomalies in device behavior using machine learning and provides real-time alerts.
+A comprehensive network monitoring and device management system for smart homes.
+Provides real-time alerts about suspicious device activity.
 
 ## 🎯 Core Features:
 - **Device Management**: Monitor and control IoT devices in your smart home
-- **Anomaly Detection**: ML-based behavioral analysis using Isolation Forest
 - **Real-time Alerts**: Get notified immediately about suspicious device activity
 - **Firewall Control**: Block malicious devices using nftables
 - **User Management**: Multi-user support with role-based access control
-- **System Settings**: Configure detection thresholds and monitoring options
 
 ## 🔐 Authentication:
 All endpoints (except /health and /docs) require JWT Bearer authentication.
@@ -68,7 +66,6 @@ Error responses include detailed error messages for debugging.
 2. Get your user profile via `/api/auth/me`
 3. Manage devices via `/api/devices`
 4. Monitor alerts via `/api/alerts`
-5. Run ML inference via `/api/model/inference`
     """,
     version="1.0.0",
     docs_url="/docs",
@@ -111,6 +108,16 @@ app.include_router(
 )
 
 app.include_router(
+    users.router,
+    prefix="/api/users",
+    tags=["👤 User Profile"],
+    responses={
+        401: {"description": "Unauthorized"},
+        404: {"description": "User not found"},
+    }
+)
+
+app.include_router(
     devices.router,
     prefix="/api/devices",
     tags=["📱 Device Management"],
@@ -132,27 +139,8 @@ app.include_router(
 )
 
 
-app.include_router(
-    settings_api.router,
-    prefix="/api/settings",
-    tags=["⚙️ System Settings"],
-    responses={
-        401: {"description": "Unauthorized"},
-    }
-)
-
 # WebSocket routes (no prefix, direct paths)
 app.include_router(websocket_routes.router)
-
-# Push notification routes
-app.include_router(
-    push.router,
-    prefix="/api/push",
-    tags=["📱 Push Notifications"],
-    responses={
-        401: {"description": "Unauthorized"},
-    }
-)
 
 
 # ============= Health Check Endpoint =============
@@ -217,23 +205,11 @@ def custom_openapi():
             },
             {
                 "name": "🚨 Alerts & Notifications",
-                "description": "Retrieve and manage security alerts from anomaly detection",
+                "description": "Retrieve and manage security alerts",
                 "externalDocs": {
                     "description": "Security Alert Types",
                     "url": "https://www.issa.org/"
                 }
-            },
-            {
-                "name": "🤖 ML Model & Inference",
-                "description": "Machine learning model status and anomaly inference endpoints",
-                "externalDocs": {
-                    "description": "Isolation Forest Algorithm",
-                    "url": "https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.IsolationForest.html"
-                }
-            },
-            {
-                "name": "⚙️ System Settings",
-                "description": "Configure HomeGuard system behavior and detection parameters",
             },
             {
                 "name": "❤️ Health Check",

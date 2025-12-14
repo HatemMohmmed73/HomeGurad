@@ -1,39 +1,49 @@
+# ==========================================
+# Stage 1: Build Frontend (Node.js)
+# ==========================================
+FROM node:18-alpine as frontend-builder
+
+WORKDIR /app/frontend
+
+# Install dependencies first (better caching)
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm install
+
+# Copy source and build
+COPY frontend ./
+RUN npm run build
+
+# ==========================================
+# Stage 2: Final Runtime (Python + Nginx)
+# ==========================================
 FROM python:3.11-slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
+# Install ONLY runtime dependencies
+# We need Nginx for the web server and Supervisor to manage processes
 RUN apt-get update && apt-get install -y \
-    curl \
-    wget \
-    git \
-    gcc \
-    g++ \
-    make \
-    supervisor \
     nginx \
-    nodejs \
-    npm \
+    supervisor \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# Setup Backend
 COPY backend/requirements.txt /app/backend/requirements.txt
+# Install Python dependencies (binary wheels usually available for arm64/amd64)
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
 COPY backend /app/backend
-WORKDIR /app/backend
-RUN mkdir -p ml_models
 
-WORKDIR /app/frontend
-COPY frontend/package.json /app/frontend/
-RUN npm install
+# Setup Frontend (Copy from Stage 1)
+# We only copy the built 'dist' folder, leaving Node_modules behind
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
-COPY frontend /app/frontend
-RUN npm run build
-
+# Configure Nginx
 RUN rm /etc/nginx/sites-enabled/default
-
 RUN mkdir -p /etc/nginx/sites-available && cat > /etc/nginx/sites-available/homeguard << 'NGINX_EOF'
 server {
     listen 80 default_server;
@@ -77,6 +87,7 @@ NGINX_EOF
 
 RUN ln -s /etc/nginx/sites-available/homeguard /etc/nginx/sites-enabled/homeguard
 
+# Configure Supervisor
 RUN mkdir -p /etc/supervisor/conf.d && cat > /etc/supervisor/conf.d/homeguard.conf << 'SUPERVISOR_EOF'
 [supervisord]
 nodaemon=true
@@ -91,7 +102,7 @@ autorestart=true
 stderr_logfile=/var/log/supervisor/backend.err.log
 stdout_logfile=/var/log/supervisor/backend.out.log
 directory=/app/backend
-environment=PYTHONUNBUFFERED="1",DATABASE_NAME="homeguard",SECRET_KEY="homeguard-secret-key-change-in-production",ENV="production",DEBUG="False"
+environment=PYTHONUNBUFFERED="1"
 
 [program:nginx]
 command=/usr/sbin/nginx -g "daemon off;"
@@ -107,45 +118,22 @@ SUPERVISOR_EOF
 
 RUN mkdir -p /var/log/supervisor
 
+# Setup Entrypoint
 RUN cat > /entrypoint.sh << 'ENTRYPOINT_EOF'
 #!/bin/bash
 set -e
 
 echo "Starting HomeGuard..."
 
-# Update supervisor config with environment variables
-cat > /etc/supervisor/conf.d/homeguard.conf << EOF
-[supervisord]
-nodaemon=true
-user=root
-logfile=/var/log/supervisor/supervisord.log
-pidfile=/var/run/supervisord.pid
+# Ensure environment variables are passed to supervisor
+# We regenerate the config to inject runtime ENV vars if needed, 
+# but simply exporting them before running supervisor works for child processes if configured correctly.
+# Here we keep it simple.
 
-[program:backend]
-command=python -m uvicorn main:app --host 0.0.0.0 --port 8000
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/supervisor/backend.err.log
-stdout_logfile=/var/log/supervisor/backend.out.log
-directory=/app/backend
-environment=PYTHONUNBUFFERED="1",DATABASE_NAME="${DATABASE_NAME:-homeguard}",SECRET_KEY="${SECRET_KEY:-homeguard-secret-key-change-in-production}",ENV="${ENV:-production}",DEBUG="${DEBUG:-False}",MONGODB_URL="${MONGODB_URL:-mongodb://localhost:27017}"
-
-[program:nginx]
-command=/usr/sbin/nginx -g "daemon off;"
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/supervisor/nginx.err.log
-stdout_logfile=/var/log/supervisor/nginx.out.log
-
-[group:homeguard]
-programs=backend,nginx
-priority=999
-EOF
-
-export MONGODB_URL="${MONGODB_URL:-mongodb://localhost:27017}"
-cd /app/backend
 export PYTHONPATH="/app/backend:${PYTHONPATH}"
+cd /app/backend
 
+# Wait for MongoDB
 MAX_WAIT=60
 WAIT_COUNT=0
 until python - <<'PY'
@@ -167,7 +155,6 @@ echo "MongoDB is ready"
 python init_db.py
 
 echo "Starting supervisord..."
-
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/homeguard.conf
 ENTRYPOINT_EOF
 

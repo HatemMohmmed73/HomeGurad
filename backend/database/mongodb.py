@@ -52,11 +52,6 @@ def get_users_collection():
     return database.users
 
 
-def get_settings_collection():
-    """Get settings collection"""
-    return database.settings
-
-
 def get_security_alerts_collection():
     """Get security alerts collection"""
     return database.security_alerts

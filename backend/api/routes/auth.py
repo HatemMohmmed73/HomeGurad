@@ -20,12 +20,12 @@ router = APIRouter()
 @router.post("/login", response_model=Token)
 async def login(credentials: UserLogin):
     """Login and get access tokens with last_login update"""
-    user = await authenticate_user(credentials.email, credentials.password)
+    user = await authenticate_user(credentials.username, credentials.password)
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
@@ -45,10 +45,10 @@ async def login(credentials: UserLogin):
     
     # Create tokens
     access_token = create_access_token(
-        data={"sub": user["email"], "role": UserRole.ADMIN},
+        data={"sub": user["username"], "role": UserRole.ADMIN},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    refresh_token = create_refresh_token(data={"sub": user["email"]})
+    refresh_token = create_refresh_token(data={"sub": user["username"]})
     
     return Token(
         access_token=access_token,
@@ -63,7 +63,8 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     role = current_user.get("role", UserRole.ADMIN)
     return UserProfile(
         id=str(current_user["_id"]),
-        email=current_user["email"],
+        username=current_user["username"],
+        email=current_user.get("email"),
         full_name=current_user.get("full_name"),
         role=role,
         phone=current_user.get("phone"),
@@ -73,5 +74,3 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         created_at=current_user.get("created_at"),
         last_login=current_user.get("last_login")
     )
-
-

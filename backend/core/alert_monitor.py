@@ -9,7 +9,8 @@ from typing import Set, Optional
 from datetime import datetime
 
 from core.websocket_manager import websocket_manager
-from core.push_notifications import push_service
+from core.email import email_service
+from database.mongodb import get_users_collection
 from config import settings
 
 logger = logging.getLogger(__name__)
@@ -29,11 +30,13 @@ class AlertMonitor:
         try:
             if not settings.ALERTS_FILE_PATH:
                 logger.warning("ALERTS_FILE_PATH not configured, alert monitoring disabled")
+                print("⚠️  Alert monitoring disabled: ALERTS_FILE_PATH not configured")
                 return
             
             self.file_path = Path(settings.ALERTS_FILE_PATH)
             if not self.file_path.exists():
                 logger.warning(f"Alerts file not found: {self.file_path}")
+                print(f"⚠️  Alert monitoring disabled: alerts file not found at {self.file_path}")
                 return
             
             self.monitoring = True
@@ -42,9 +45,11 @@ class AlertMonitor:
             # Start monitoring task - store it to prevent garbage collection
             self._monitor_task = asyncio.create_task(self._monitor_loop())
             logger.info(f"Alert monitoring started for {self.file_path}")
+            print(f"✅ Alert monitoring started for {self.file_path}")
         except Exception as e:
             logger.error(f"Error starting alert monitor: {e}", exc_info=True)
             # Don't crash the app if monitoring fails to start
+            print(f"⚠️  Alert monitoring failed to start: {e}")
     
     def _load_initial_alerts(self):
         """Load existing alerts to track which ones are new"""
@@ -97,6 +102,7 @@ class AlertMonitor:
                 # Update tracked alert IDs
                 self.last_alert_ids = current_alert_ids
                 logger.info(f"Detected {len(new_alert_ids)} new alert(s)")
+                print(f"🚨 Detected {len(new_alert_ids)} new alert(s)")
         
         except json.JSONDecodeError:
             logger.warning(f"Invalid JSON in alerts file: {self.file_path}")
@@ -104,49 +110,45 @@ class AlertMonitor:
             logger.error(f"Error checking for new alerts: {e}")
     
     async def _send_alert_notification(self, alert_data: dict):
-        """Send alert notification via WebSocket and Push"""
+        """Send alert notification via WebSocket and Email"""
         try:
-            # Format alert for WebSocket
+            # Format alert payload
             device = alert_data.get("device", {})
             alert_payload = {
                 "alert_id": alert_data.get("alert_id"),
                 "device_ip": device.get("ip", "unknown"),
                 "device_name": device.get("name", "Unknown Device"),
                 "severity": alert_data.get("severity", "low"),
-                "reason": alert_data.get("reason", "Anomalous activity detected"),
-                "anomaly_score": alert_data.get("anomaly_score", 0.0),
+                "reason": alert_data.get("reason", "Suspicious activity detected"),
                 "timestamp": alert_data.get("timestamp"),
                 "action_taken": alert_data.get("action_taken"),
                 "status": alert_data.get("status", "active")
             }
             
-            # Send via WebSocket (for active dashboard connections)
+            # 1. Send via WebSocket (Popups)
             await websocket_manager.send_alert(alert_payload)
             logger.info(f"Sent WebSocket notification for alert: {alert_payload.get('alert_id')}")
             
-            # Send via Push Notification (for all registered devices, even when browser is closed)
-            push_payload = {
-                "title": f"🚨 {alert_payload['severity'].upper()} Alert: {alert_payload['device_name']}",
-                "body": alert_payload['reason'],
-                "icon": "/favicon.ico",
-                "badge": "/favicon.ico",
-                "tag": alert_payload['alert_id'],
-                "data": {
-                    "url": "/alerts",
-                    "alert_id": alert_payload['alert_id'],
-                    "device_ip": alert_payload['device_ip']
-                },
-                "requireInteraction": alert_payload['severity'] in ['high', 'critical']
-            }
-            
-            # Send to all users (since we only have one admin user)
-            sent_count = await push_service.send_to_all_users(push_payload)
-            logger.info(f"Sent push notifications to {sent_count} device(s) for alert: {alert_payload.get('alert_id')}")
+            # 2. Send via Email
+            try:
+                users_collection = get_users_collection()
+                # Find admins who have notifications enabled
+                async for user in users_collection.find({
+                    "role": "admin",
+                    "preferences.notifications_enabled": True
+                }):
+                    if user.get("email"):
+                        logger.info(f"Sending email alert to {user['email']}")
+                        print(f"📧 Sending email alert to {user['email']}")
+                        ok = email_service.send_alert_email(user["email"], alert_payload)
+                        print(f"📧 Email send result to {user['email']}: {ok}")
+            except Exception as e:
+                logger.error(f"Error sending email notifications: {e}")
+                print(f"⚠️  Error while sending email notifications: {e}")
         
         except Exception as e:
-            logger.error(f"Error sending alert notification: {e}")
+            logger.error(f"Error processing alert notification: {e}")
 
 
 # Global instance
 alert_monitor = AlertMonitor()
-

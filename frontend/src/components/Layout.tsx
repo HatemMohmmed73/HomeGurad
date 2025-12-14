@@ -1,31 +1,68 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   FiHome, 
   FiShield, 
   FiAlertTriangle, 
-  FiSettings, 
   FiLogOut,
   FiMenu,
   FiX
 } from 'react-icons/fi';
 import { useAuthStore } from '../store/authStore';
+import websocket from '../services/websocket';
+import AlertPopup from './AlertPopup';
+import { Alert } from '../types';
 
 const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [newAlert, setNewAlert] = useState<Alert | null>(null);
 
   const navItems = [
     { path: '/', icon: FiHome, label: 'Dashboard' },
     { path: '/alerts', icon: FiAlertTriangle, label: 'Alerts' },
-    { path: '/settings', icon: FiSettings, label: 'Settings' },
   ];
+
+  useEffect(() => {
+    // Global WebSocket connection for Alerts
+    if (user) {
+      websocket.connectAlerts((message) => {
+        if (message.type === 'new_alert' && message.data) {
+          const alertData = message.data;
+          
+          const newAlertObj: Alert = {
+            _id: alertData.alert_id || alertData.device_ip,
+            device_id: alertData.device_ip, // Assuming IP is ID for now or it's passed
+            device_ip: alertData.device_ip,
+            device_mac: alertData.device_mac || alertData.device_ip,
+            device_name: alertData.device_name || alertData.device_ip,
+            alert_type: 'anomaly',
+            severity: alertData.severity || 'medium',
+            timestamp: alertData.timestamp ? new Date(alertData.timestamp * 1000).toISOString() : new Date().toISOString(),
+            reason: alertData.reason || 'Anomalous activity detected',
+            details: {},
+            action_taken: alertData.action_taken || null,
+            acknowledged: alertData.status === 'acknowledged'
+          };
+          
+          setNewAlert(newAlertObj);
+        }
+      });
+    }
+
+    return () => {
+      // Don't disconnect here if we want persistence, but for cleanup it's good.
+      // Since Layout unmounts only on logout/close, it's fine.
+      websocket.disconnectAlerts();
+    };
+  }, [user]);
 
   const isActive = (path: string) => location.pathname === path;
 
   const handleLogout = () => {
+    websocket.disconnectAll();
     logout();
     navigate('/login', { replace: true });
   };
@@ -36,6 +73,13 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Alert Popup */}
+      <AlertPopup 
+        alert={newAlert} 
+        onClose={() => setNewAlert(null)}
+        onViewDetails={() => navigate('/alerts')} 
+      />
+
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-sm z-30 flex items-center justify-between px-4 py-3">
         <div className="flex items-center space-x-2">

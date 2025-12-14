@@ -3,9 +3,12 @@ import { persist } from 'zustand/middleware';
 import api from '../services/api';
 
 interface User {
-  email: string;
+  id: string;
+  username: string;
+  email?: string;
   full_name?: string;
   role: string;
+  profile_picture_url?: string;
 }
 
 interface AuthState {
@@ -13,9 +16,10 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   setTokens: (accessToken: string, refreshToken: string) => void;
+  setUser: (user: User) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -26,9 +30,9 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       isAuthenticated: false,
 
-      login: async (email: string, password: string) => {
+      login: async (username: string, password: string) => {
         try {
-          const response = await api.post('/auth/login', { email, password });
+          const response = await api.post('/auth/login', { username, password });
           const { access_token, refresh_token } = response.data;
           
           set({
@@ -64,6 +68,10 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: true,
         });
       },
+
+      setUser: (user: User) => {
+        set({ user });
+      }
     }),
     {
       name: 'auth-storage',

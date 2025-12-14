@@ -14,10 +14,11 @@ import { Device, DeviceStatus } from '../types';
 
 interface DeviceCardProps {
   device: Device;
-  onUpdate: (device: Device) => void;
+  onUpdate?: (device: Device) => void;
+  isUnknown?: boolean;
 }
 
-const DeviceCard = ({ device, onUpdate }: DeviceCardProps) => {
+const DeviceCard = ({ device, onUpdate, isUnknown = false }: DeviceCardProps) => {
   const [loading, setLoading] = useState(false);
 
   const getStatusColor = (status: DeviceStatus) => {
@@ -39,13 +40,13 @@ const DeviceCard = ({ device, onUpdate }: DeviceCardProps) => {
     if (device.is_blocked) {
       return <FiLock className="text-red-500" />;
     }
-    if (device.behavioral_score > 0.5) {
-      return <FiAlertCircle className="text-yellow-500" />;
-    }
     return <FiShield className="text-green-500" />;
   };
 
-  const handleToggleBlock = async () => {
+  const handleToggleBlock = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation
+    if (!onUpdate) return;
+    
     setLoading(true);
     try {
       const endpoint = device.is_blocked ? 'unblock' : 'block';
@@ -73,7 +74,7 @@ const DeviceCard = ({ device, onUpdate }: DeviceCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+    <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden ${isUnknown ? 'border-2 border-yellow-400' : ''}`}>
       {/* Header */}
       <div className="p-3 sm:p-4 border-b flex items-start justify-between gap-2">
         <div className="flex items-start space-x-2 sm:space-x-3 min-w-0 flex-1">
@@ -108,33 +109,20 @@ const DeviceCard = ({ device, onUpdate }: DeviceCardProps) => {
           </div>
         </div>
 
-        {/* Behavioral Score */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-gray-500">Behavioral Score</span>
-            <span className="text-xs font-medium text-gray-700">
-              {(device.behavioral_score * 100).toFixed(1)}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div
-              className={`h-2 rounded-full transition-all ${
-                device.behavioral_score > 0.7
-                  ? 'bg-red-500'
-                  : device.behavioral_score > 0.4
-                  ? 'bg-yellow-500'
-                  : 'bg-green-500'
-              }`}
-              style={{ width: `${device.behavioral_score * 100}%` }}
-            />
-          </div>
-        </div>
-
         {/* MAC Address */}
         <div className="pt-2 border-t">
           <p className="text-xs text-gray-500">MAC Address</p>
           <p className="text-xs font-mono text-gray-700 break-all">{device.mac}</p>
         </div>
+        
+        {isUnknown && (
+          <div className="pt-2 border-t bg-yellow-50 -mx-4 -mb-4 p-4 mt-2">
+            <p className="text-xs text-yellow-800 font-medium flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+              New Device Detected
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

@@ -1,59 +1,5 @@
 [
   {
-    "alert_id": "ALRT-1764062419",
-    "timestamp": 1764062419.5337718,
-    "device": {
-      "ip": "192.168.100.228",
-      "name": "External/Unknown"
-    },
-    "anomaly_score": -0.28290037167341753,
-    "severity": "High",
-    "reason": "Anomalous traffic behavior detected",
-    "action_taken": {
-      "blocked": true,
-      "block_type": "ip",
-      "duration": "permanent",
-      "rule_id": "successfully!"
-    },
-    "status": "active"
-  },
-  {
-    "alert_id": "ALRT-1764062829",
-    "timestamp": 1764062829.2491891,
-    "device": {
-      "ip": "192.168.100.228",
-      "name": "External/Unknown"
-    },
-    "anomaly_score": -0.28290037167341753,
-    "severity": "High",
-    "reason": "Anomalous traffic behavior detected",
-    "action_taken": {
-      "blocked": true,
-      "block_type": "ip",
-      "duration": "permanent",
-      "rule_id": "successfully!"
-    },
-    "status": "active"
-  },
-  {
-    "alert_id": "ALRT-1764063969",
-    "timestamp": 1764063969.2233171,
-    "device": {
-      "ip": "fe80::3e6a:d2ff:fe0d:17fa",
-      "name": "External/Unknown"
-    },
-    "anomaly_score": -0.28290037167341753,
-    "severity": "High",
-    "reason": "Anomalous traffic behavior detected",
-    "action_taken": {
-      "blocked": true,
-      "block_type": "ip",
-      "duration": "permanent",
-      "rule_id": "successfully!"
-    },
-    "status": "active"
-  },
-  {
     "alert_id": "ALRT-1764064329",
     "timestamp": 1764064329.7153316,
     "device": {
@@ -70,6 +16,192 @@
       "rule_id": "successfully!"
     },
     "status": "active"
+  },
+  {
+    "alert_id": "TEST-FINAL-003",
+    "timestamp": 1765660260.0,
+    "device": {
+      "ip": "192.168.1.99",
+      "name": "Test Device"
+    },
+    "severity": "critical",
+    "reason": "Manual Test Alert for Popup/Audio",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-POPUP-1765660506",
+    "timestamp": 1765660506.113258,
+    "device": {
+      "ip": "10.0.0.99",
+      "name": "Audio Test Device"
+    },
+    "severity": "critical",
+    "reason": "Verifying Audio Alert",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-1765660695",
+    "timestamp": 1765660695.586705,
+    "device": {
+      "ip": "10.0.0.100",
+      "name": "Email Test Device"
+    },
+    "severity": "high",
+    "reason": "Testing Email Configuration",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-1765661766",
+    "timestamp": 1765661766.8992682,
+    "device": {
+      "ip": "8.8.8.8",
+      "name": "Google DNS"
+    },
+    "severity": "critical",
+    "reason": "Final Email Test - Success Expected",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FIXED-1765662062",
+    "timestamp": 1765662062.813018,
+    "device": {
+      "ip": "1.1.1.1",
+      "name": "Cloudflare DNS"
+    },
+    "severity": "critical",
+    "reason": "Email Fix Verification",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V2-1765662329",
+    "timestamp": 1765662329.306326,
+    "device": {
+      "ip": "10.0.0.88",
+      "name": "Email Test V2"
+    },
+    "severity": "high",
+    "reason": "Testing Corrected Email",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V2-1765662402",
+    "timestamp": 1765662402.664026,
+    "device": {
+      "ip": "10.0.0.88",
+      "name": "Email Test V2"
+    },
+    "severity": "high",
+    "reason": "Testing Corrected Email",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V4-1765662579",
+    "timestamp": 1765662579.126436,
+    "device": {
+      "ip": "10.0.0.66",
+      "name": "Deep Configuration Reload"
+    },
+    "severity": "critical",
+    "reason": "Environment Variables Refreshed",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V5-1765662870",
+    "timestamp": 1765662870.448241,
+    "device": {
+      "ip": "8.8.4.4",
+      "name": "User Restart Test"
+    },
+    "severity": "critical",
+    "reason": "User Restarted Container - Verification",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V6-1765662924",
+    "timestamp": 1765662924.719768,
+    "device": {
+      "ip": "1.1.1.2",
+      "name": "DB Email Fix Test"
+    },
+    "severity": "critical",
+    "reason": "Retrying after DB Email Update",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FIXED-V7-1765663317",
+    "timestamp": 1765663317.32977,
+    "device": {
+      "ip": "10.0.0.123",
+      "name": "Final Fix Verification"
+    },
+    "severity": "critical",
+    "reason": "Verifying Email Fix",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FIXED-V8-1765663346",
+    "timestamp": 1765663346.591507,
+    "device": {
+      "ip": "8.8.4.4",
+      "name": "Final Final Verification"
+    },
+    "severity": "critical",
+    "reason": "Verifying Email Fix Round 2",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V9-1765663461",
+    "timestamp": 1765663461.72838,
+    "device": {
+      "ip": "8.8.8.8",
+      "name": "Final Attempt"
+    },
+    "severity": "critical",
+    "reason": "Verifying Corrected Credentials",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-FINAL-V10-1765663578",
+    "timestamp": 1765663578.4141598,
+    "device": {
+      "ip": "1.1.1.1",
+      "name": "Final Check"
+    },
+    "severity": "critical",
+    "reason": "Verifying Email Credentials Final",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-NOSPACE-1765663829",
+    "timestamp": 1765663829.417844,
+    "device": {
+      "ip": "9.9.9.9",
+      "name": "Space Fix Test"
+    },
+    "severity": "critical",
+    "reason": "Email test after stripping spaces",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-EMAIL-NOSPACE-POSTSTART-1765663916",
+    "timestamp": 1765663916.423384,
+    "device": {
+      "ip": "7.7.7.7",
+      "name": "Post-start Test"
+    },
+    "severity": "critical",
+    "reason": "Email test after monitor started",
+    "status": "active"
+  },
+  {
+    "alert_id": "TEST-AFTER-PRINTS-1765664119",
+    "timestamp": 1765664119.513073,
+    "device": {
+      "ip": "6.6.6.6",
+      "name": "Monitor Debug"
+    },
+    "severity": "critical",
+    "reason": "Verify monitor triggers email",
+    "status": "active"
   }
 ]
-

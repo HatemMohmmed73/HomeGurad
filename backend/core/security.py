@@ -60,10 +60,10 @@ def decode_token(token: str) -> TokenData:
     )
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
-        token_data = TokenData(email=email)
+        token_data = TokenData(username=username)
         return token_data
     except JWTError:
         raise credentials_exception
@@ -75,7 +75,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     token_data = decode_token(token)
     
     users_collection = get_users_collection()
-    user = await users_collection.find_one({"email": token_data.email})
+    user = await users_collection.find_one({"username": token_data.username})
     
     if user is None:
         raise HTTPException(
@@ -92,14 +92,13 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     return user
 
 
-async def authenticate_user(email: str, password: str):
-    """Authenticate user with email and password"""
+async def authenticate_user(username: str, password: str):
+    """Authenticate user with username and password"""
     users_collection = get_users_collection()
-    user = await users_collection.find_one({"email": email})
+    user = await users_collection.find_one({"username": username})
     
     if not user:
         return False
     if not verify_password(password, user["password_hash"]):
         return False
     return user
-

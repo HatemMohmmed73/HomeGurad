@@ -33,7 +33,6 @@ export interface Device {
   total_bytes_sent: number;
   total_bytes_received: number;
   packet_count: number;
-  behavioral_score: number;
   is_blocked: boolean;
   metadata?: Record<string, any>;
 }
@@ -46,21 +45,11 @@ export interface Alert {
   device_name?: string; // Device name (may be in details.device_name from API)
   alert_type: AlertType;
   severity: AlertSeverity;
-  anomaly_score: number;
   timestamp: string;
   reason: string;
   details?: Record<string, any>;
   action_taken?: string;
   acknowledged: boolean;
-}
-
-export interface SystemSettings {
-  auto_block_enabled: boolean;
-  anomaly_threshold: number;
-  alert_notification_enabled: boolean;
-  model_retrain_interval_hours: number;
-  zeek_monitoring_enabled: boolean;
-  updated_at: string;
 }
 
 export interface AlertStats {

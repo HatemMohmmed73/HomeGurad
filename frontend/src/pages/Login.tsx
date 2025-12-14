@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiShield, FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
+import { FiShield, FiUser, FiLock, FiAlertCircle } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuthStore } from '../store/authStore';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuthStore();
-  const [email, setEmail] = useState('admin@homeguard.local');
+  const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,8 +25,8 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-          navigate('/', { replace: true });
+      await login(username, password);
+        navigate('/', { replace: true });
         toast.success('✅ Login successful!');
     } catch (error: any) {
       const errorMsg = error.response?.data?.detail || error.message || 'Login failed';
@@ -65,19 +65,19 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
+            {/* Username */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+                Username
               </label>
               <div className="relative">
-                <FiMail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <FiUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="you@example.com"
+                  placeholder="admin"
                   required
                 />
               </div>

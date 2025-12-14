@@ -40,6 +40,13 @@ services:
       - DATABASE_NAME=homeguard
       - DEVICES_FILE_PATH=/data/devices.json
       - ALERTS_FILE_PATH=/data/alerts.json
+      # Email Settings
+      - EMAIL_HOST=smtp.gmail.com
+      - EMAIL_PORT=587
+      - EMAIL_USER=hatemmohmmed73@gmail.com # <--- VERIFY THIS SPELLING IS CORRECT!
+      - EMAIL_PASSWORD=qtwglqdxccokmqxq
+      - EMAIL_FROM=hatemmohmmed73@gmail.com
+      - EMAIL_ENABLED=True
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
@@ -47,10 +54,10 @@ services:
       retries: 3
       start_period: 60s
     volumes:
+      - ./backend:/app/backend
       - ./data/devices.json:/data/devices.json:ro
       - ./data/alerts.json:/data/alerts.json:ro
 
 volumes:
   homeguard_data:
     driver: local
-

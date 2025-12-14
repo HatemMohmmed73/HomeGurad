@@ -54,7 +54,6 @@ class Device(BaseModel):
     total_bytes_sent: int = Field(0, description="Total bytes sent")
     total_bytes_received: int = Field(0, description="Total bytes received")
     packet_count: int = Field(0, description="Total packet count")
-    behavioral_score: float = Field(0.0, description="Anomaly score (0-1)")
     is_blocked: bool = Field(False, description="Is device blocked")
     is_running: bool = Field(True, description="Is device running")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
@@ -91,7 +90,6 @@ class Alert(BaseModel):
     device_mac: str = Field(..., description="Device MAC")
     alert_type: AlertType = Field(..., description="Type of alert")
     severity: AlertSeverity = Field(..., description="Severity level")
-    anomaly_score: float = Field(..., description="Anomaly score from ML")
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     reason: str = Field(..., description="Human-readable explanation")
     details: Dict[str, Any] = Field(default_factory=dict, description="Additional details")
@@ -111,7 +109,8 @@ class AlertResponse(Alert):
 
 class User(BaseModel):
     """Admin user record"""
-    email: str = Field(..., description="User email")
+    username: str = Field(..., description="Username for login")
+    email: Optional[str] = Field(None, description="User email for notifications")
     password_hash: str = Field(..., description="Hashed password")
     full_name: Optional[str] = Field(None, description="Full name")
     role: str = Field(UserRole.ADMIN, description="User role")
@@ -135,7 +134,8 @@ class User(BaseModel):
 class UserProfile(BaseModel):
     """User profile response"""
     id: str = Field(..., alias="_id")
-    email: str
+    username: str
+    email: Optional[str]
     full_name: Optional[str]
     role: str
     phone: Optional[str]
@@ -151,7 +151,7 @@ class UserProfile(BaseModel):
 
 class UserLogin(BaseModel):
     """User login model with validation"""
-    email: str = Field(..., min_length=5, description="User email")
+    username: str = Field(..., min_length=3, description="Username")
     password: str = Field(..., min_length=1, description="Password")
 
 
@@ -164,73 +164,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     """Token payload data"""
-    email: Optional[str] = None
-
-
-# ============= Push Notification Models =============
-
-class PushSubscription(BaseModel):
-    """Web Push Subscription Model"""
-    user_email: str = Field(..., description="User email who owns this subscription")
-    endpoint: str = Field(..., description="Push service endpoint URL")
-    keys: Dict[str, str] = Field(..., description="Encryption keys (p256dh, auth)")
-    user_agent: Optional[str] = Field(None, description="Browser user agent")
-    device_info: Optional[Dict[str, Any]] = Field(None, description="Device information")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    last_used: datetime = Field(default_factory=datetime.utcnow)
-    is_active: bool = Field(True, description="Is subscription active")
-
-
-class PushSubscriptionCreate(BaseModel):
-    """Push subscription creation model"""
-    endpoint: str = Field(..., description="Push service endpoint URL")
-    keys: Dict[str, str] = Field(..., description="Encryption keys")
-    user_agent: Optional[str] = None
-    device_info: Optional[Dict[str, Any]] = None
-
-
-# ============= Settings Models =============
-
-class SystemSettings(BaseModel):
-    """System configuration settings"""
-    auto_block_enabled: bool = Field(False, description="Auto-block on anomaly")
-    anomaly_threshold: float = Field(0.5, description="ML anomaly threshold")
-    alert_notification_enabled: bool = Field(True, description="Enable notifications")
-    model_retrain_interval_hours: int = Field(24, description="Model retrain interval")
-    zeek_monitoring_enabled: bool = Field(True, description="Zeek monitoring status")
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-
-class SettingsUpdate(BaseModel):
-    """Settings update model"""
-    auto_block_enabled: Optional[bool] = None
-    anomaly_threshold: Optional[float] = None
-    alert_notification_enabled: Optional[bool] = None
-    model_retrain_interval_hours: Optional[int] = None
-    zeek_monitoring_enabled: Optional[bool] = None
-
-
-# ============= ML Models =============
-
-class FlowFeatures(BaseModel):
-    """Network flow features for ML inference"""
-    duration: float = Field(..., description="Flow duration in seconds")
-    orig_bytes: int = Field(..., description="Bytes from originator")
-    resp_bytes: int = Field(..., description="Bytes from responder")
-    orig_pkts: int = Field(..., description="Packets from originator")
-    resp_pkts: int = Field(..., description="Packets from responder")
-    orig_ip_bytes: int = Field(..., description="IP bytes from originator")
-    resp_ip_bytes: int = Field(..., description="IP bytes from responder")
-    port: int = Field(..., description="Destination port")
-    protocol: str = Field(..., description="Protocol (tcp, udp, icmp)")
-
-
-class AnomalyResult(BaseModel):
-    """ML model inference result"""
-    is_anomaly: bool = Field(..., description="Whether traffic is anomalous")
-    anomaly_score: float = Field(..., description="Anomaly score (0-1)")
-    confidence: float = Field(..., description="Model confidence")
-    explanation: str = Field(..., description="Human-readable explanation")
+    username: Optional[str] = None
 
 
 # ============= Security Models =============

@@ -2,21 +2,30 @@ import { useEffect, useState } from 'react';
 import { 
   FiAlertTriangle, 
   FiFilter, 
-  FiCheckCircle 
+  FiCheckCircle,
+  FiMail,
+  FiX
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import api from '../services/api';
 import { Alert, AlertSeverity, AlertStats } from '../types';
+import AlertPopup from '../components/AlertPopup';
 
 const Alerts = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [stats, setStats] = useState<AlertStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<AlertSeverity | 'all'>('all');
   const [days, setDays] = useState(7);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [email, setEmail] = useState('');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   useEffect(() => {
     loadData();
+    loadUserProfile();
     
     // Poll for updates every 5 seconds (for file-based data)
     const pollInterval = setInterval(() => {
@@ -27,6 +36,16 @@ const Alerts = () => {
       clearInterval(pollInterval);
     };
   }, [filter, days]);
+
+  const loadUserProfile = async () => {
+    try {
+      const res = await api.get('/users/me');
+      setEmail(res.data.email || '');
+      setNotificationsEnabled(res.data.preferences?.notifications_enabled ?? true);
+    } catch (error) {
+      console.error('Failed to load user profile');
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -62,6 +81,25 @@ const Alerts = () => {
     }
   };
 
+  const handleUpdateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingEmail(true);
+    try {
+      await api.patch('/users/me', {
+        email: email,
+        preferences: {
+          notifications_enabled: notificationsEnabled
+        }
+      });
+      toast.success('Email settings updated successfully');
+      setShowEmailModal(false);
+    } catch (error) {
+      toast.error('Failed to update email settings');
+    } finally {
+      setSavingEmail(false);
+    }
+  };
+
   const getSeverityColor = (severity: AlertSeverity) => {
     switch (severity) {
       case AlertSeverity.CRITICAL:
@@ -86,12 +124,94 @@ const Alerts = () => {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 relative">
+      {/* Alert Details Modal */}
+      <AlertPopup 
+        alert={selectedAlert} 
+        onClose={() => setSelectedAlert(null)} 
+        isModal={true}
+      />
+
       {/* Header */}
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-1 sm:mb-2">Security Alerts</h1>
-        <p className="text-sm sm:text-base text-gray-600">Monitor and manage security events</p>
+      <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-1 sm:mb-2">Security Alerts</h1>
+          <p className="text-sm sm:text-base text-gray-600">Monitor and manage security events</p>
+        </div>
+        <button
+          onClick={() => setShowEmailModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-gray-700 font-medium text-sm sm:text-base"
+        >
+          <FiMail className="text-lg" />
+          <span>Configure Email Alerts</span>
+        </button>
       </div>
+
+      {/* Email Configuration Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-fade-in">
+            <div className="p-4 border-b flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-800 text-lg">Email Alert Settings</h3>
+              <button 
+                onClick={() => setShowEmailModal(false)}
+                className="text-gray-500 hover:text-gray-700 p-1"
+              >
+                <FiX className="text-xl" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdateEmail} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="admin@example.com"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Alerts will be sent to this email address.
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="notifications"
+                  checked={notificationsEnabled}
+                  onChange={(e) => setNotificationsEnabled(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500 border-gray-300"
+                />
+                <label htmlFor="notifications" className="text-sm text-gray-700 select-none">
+                  Enable email notifications for new alerts
+                </label>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowEmailModal(false)}
+                  className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEmail}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {savingEmail ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Stats Summary */}
       {stats && (
@@ -174,7 +294,8 @@ const Alerts = () => {
             {alerts.map((alert) => (
               <div
                 key={alert._id}
-                className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors ${
+                onClick={() => setSelectedAlert(alert)}
+                className={`p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
                   alert.acknowledged ? 'opacity-60' : ''
                 }`}
               >
@@ -206,8 +327,6 @@ const Alerts = () => {
                       <span className="break-all">Device: {alert.device_ip}</span>
                       <span className="hidden sm:inline">•</span>
                       <span>{new Date(alert.timestamp).toLocaleString()}</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span>Score: {(alert.anomaly_score * 100).toFixed(1)}%</span>
                     </div>
                     {alert.action_taken && (
                       <p className="text-xs sm:text-sm text-blue-600 mt-2">
@@ -218,7 +337,10 @@ const Alerts = () => {
                   <div className="w-full sm:w-auto">
                     {!alert.acknowledged && (
                       <button
-                        onClick={() => handleAcknowledge(alert._id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAcknowledge(alert._id);
+                        }}
                         className="w-full sm:w-auto px-3 py-1.5 text-xs sm:text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors whitespace-nowrap"
                       >
                         Acknowledge

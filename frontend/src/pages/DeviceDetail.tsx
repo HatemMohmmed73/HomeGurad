@@ -6,7 +6,10 @@ import {
   FiActivity, 
   FiClock,
   FiLock,
-  FiUnlock
+  FiUnlock,
+  FiEdit2,
+  FiCheck,
+  FiX
 } from 'react-icons/fi';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { toast } from 'react-toastify';
@@ -19,6 +22,8 @@ const DeviceDetail = () => {
   const [device, setDevice] = useState<Device | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
 
   useEffect(() => {
     loadDeviceData();
@@ -41,6 +46,7 @@ const DeviceDetail = () => {
       ]);
 
       setDevice(deviceRes.data);
+      setEditedName(deviceRes.data.hostname || '');
       setAlerts(alertsRes.data);
     } catch (error) {
       toast.error('Failed to load device data');
@@ -63,6 +69,19 @@ const DeviceDetail = () => {
       );
     } catch (error) {
       toast.error('Failed to update device');
+    }
+  };
+
+  const handleUpdateName = async () => {
+    if (!device || !editedName.trim()) return;
+
+    try {
+      await api.post(`/devices/${device._id}/name?name=${encodeURIComponent(editedName)}`);
+      setDevice({ ...device, hostname: editedName });
+      setIsEditingName(false);
+      toast.success('Device name updated');
+    } catch (error) {
+      toast.error('Failed to update device name');
     }
   };
 
@@ -98,9 +117,45 @@ const DeviceDetail = () => {
             <FiArrowLeft className="text-lg sm:text-xl" />
           </button>
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 break-words">
-              {device.hostname || 'Unknown Device'}
-            </h1>
+            {isEditingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  className="px-3 py-1 text-lg sm:text-2xl font-bold text-gray-800 border rounded focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-auto"
+                  autoFocus
+                />
+                <button
+                  onClick={handleUpdateName}
+                  className="p-2 bg-green-100 text-green-600 rounded hover:bg-green-200"
+                >
+                  <FiCheck />
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingName(false);
+                    setEditedName(device.hostname || '');
+                  }}
+                  className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                >
+                  <FiX />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 break-words">
+                  {device.hostname || 'Unknown Device'}
+                </h1>
+                <button
+                  onClick={() => setIsEditingName(true)}
+                  className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                  title="Edit name"
+                >
+                  <FiEdit2 className="text-lg" />
+                </button>
+              </div>
+            )}
             <p className="text-xs sm:text-sm text-gray-600 mt-1 break-all">{device.ip}</p>
           </div>
         </div>
@@ -153,26 +208,6 @@ const DeviceDetail = () => {
             <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Security</h3>
           </div>
           <div className="space-y-3 text-xs sm:text-sm">
-            <div>
-              <p className="text-gray-500 mb-1">Behavioral Score</p>
-              <div className="flex items-center space-x-2">
-                <div className="flex-1 bg-gray-200 rounded-full h-2 sm:h-3">
-                  <div
-                    className={`h-2 sm:h-3 rounded-full ${
-                      device.behavioral_score > 0.7
-                        ? 'bg-red-500'
-                        : device.behavioral_score > 0.4
-                        ? 'bg-yellow-500'
-                        : 'bg-green-500'
-                    }`}
-                    style={{ width: `${device.behavioral_score * 100}%` }}
-                  />
-                </div>
-                <span className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">
-                  {(device.behavioral_score * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
             <div>
               <p className="text-gray-500">Status</p>
               <p className="text-sm sm:text-base font-semibold text-gray-800 capitalize mt-1">
@@ -255,7 +290,7 @@ const DeviceDetail = () => {
                   </span>
                 </div>
                 <div className="mt-2 text-xs sm:text-sm text-gray-600 break-words">
-                  Score: {(alert.anomaly_score * 100).toFixed(1)}% • Type: {alert.alert_type}
+                  Type: {alert.alert_type}
                 </div>
               </div>
             ))
