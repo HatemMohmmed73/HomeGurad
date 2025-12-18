@@ -4,7 +4,7 @@ interface StatsCardProps {
   title: string;
   value: number | string;
   icon: IconType;
-  color: 'blue' | 'green' | 'red' | 'yellow';
+  color: 'blue' | 'green' | 'red' | 'yellow' | 'orange';
 }
 
 const StatsCard = ({ title, value, icon: Icon, color }: StatsCardProps) => {
@@ -13,6 +13,7 @@ const StatsCard = ({ title, value, icon: Icon, color }: StatsCardProps) => {
     green: 'bg-green-100 text-green-600',
     red: 'bg-red-100 text-red-600',
     yellow: 'bg-yellow-100 text-yellow-600',
+    orange: 'bg-orange-100 text-orange-600',
   };
 
   return (

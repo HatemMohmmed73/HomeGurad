@@ -29,14 +29,17 @@ const DeviceDetail = () => {
     loadDeviceData();
     
     // Poll for updates every 5 seconds (for file-based data)
+    // BUT stop polling when editing name to prevent overwriting user input
     const pollInterval = setInterval(() => {
-      loadDeviceData();
+      if (!isEditingName) {
+        loadDeviceData();
+      }
     }, 5000);
 
     return () => {
       clearInterval(pollInterval);
     };
-  }, [deviceId]);
+  }, [deviceId, isEditingName]);
 
   const loadDeviceData = async () => {
     try {
@@ -46,7 +49,10 @@ const DeviceDetail = () => {
       ]);
 
       setDevice(deviceRes.data);
-      setEditedName(deviceRes.data.hostname || '');
+      // Only update editedName if NOT currently editing (prevents overwriting user input)
+      if (!isEditingName) {
+        setEditedName(deviceRes.data.hostname || '');
+      }
       setAlerts(alertsRes.data);
     } catch (error) {
       toast.error('Failed to load device data');
@@ -118,35 +124,50 @@ const DeviceDetail = () => {
           </button>
           <div className="min-w-0 flex-1">
             {isEditingName ? (
-              <div className="flex items-center gap-2">
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleUpdateName();
+                }}
+                className="flex items-center gap-2"
+              >
                 <input
                   type="text"
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setIsEditingName(false);
+                      setEditedName(device.hostname || '');
+                    }
+                  }}
                   className="px-3 py-1 text-lg sm:text-2xl font-bold text-gray-800 border rounded focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-auto"
                   autoFocus
                 />
                 <button
-                  onClick={handleUpdateName}
+                  type="submit"
                   className="p-2 bg-green-100 text-green-600 rounded hover:bg-green-200"
+                  title="Save"
                 >
                   <FiCheck />
                 </button>
                 <button
+                  type="button"
                   onClick={() => {
                     setIsEditingName(false);
                     setEditedName(device.hostname || '');
                   }}
                   className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                  title="Cancel"
                 >
                   <FiX />
                 </button>
-              </div>
+              </form>
             ) : (
               <div className="flex items-center gap-2 group">
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 break-words">
-                  {device.hostname || 'Unknown Device'}
-                </h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-800 break-words">
+              {device.hostname || 'Unknown Device'}
+            </h1>
                 <button
                   onClick={() => setIsEditingName(true)}
                   className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"

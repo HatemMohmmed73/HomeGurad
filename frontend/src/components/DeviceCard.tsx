@@ -136,13 +136,23 @@ const DeviceCard = ({ device, onUpdate, isUnknown = false }: DeviceCardProps) =>
         <button
           onClick={handleToggleBlock}
           disabled={loading}
-          className={`w-full sm:w-auto px-3 py-1.5 text-xs sm:text-sm rounded-lg font-medium transition-colors disabled:opacity-50 ${
+          className={`w-full sm:w-auto px-3 py-1.5 text-xs sm:text-sm rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2 ${
             device.is_blocked
               ? 'bg-green-100 text-green-700 hover:bg-green-200'
               : 'bg-red-100 text-red-700 hover:bg-red-200'
           }`}
         >
-          {loading ? '...' : device.is_blocked ? 'Unblock' : 'Block'}
+          {loading ? (
+             <span>...</span> 
+          ) : device.is_blocked ? (
+             <>
+               <FiUnlock className="text-sm" /> Unblock
+             </>
+          ) : (
+             <>
+               <FiLock className="text-sm" /> Block
+             </>
+          )}
         </button>
       </div>
     </div>

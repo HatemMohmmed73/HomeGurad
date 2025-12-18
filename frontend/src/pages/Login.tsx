@@ -26,7 +26,7 @@ const Login = () => {
 
     try {
       await login(username, password);
-        navigate('/', { replace: true });
+          navigate('/', { replace: true });
         toast.success('✅ Login successful!');
     } catch (error: any) {
       const errorMsg = error.response?.data?.detail || error.message || 'Login failed';

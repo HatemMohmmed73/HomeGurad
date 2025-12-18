@@ -22,11 +22,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
 
 # Install ONLY runtime dependencies
-# We need Nginx for the web server and Supervisor to manage processes
+# We need Nginx for the web server, Supervisor to manage processes, and nftables for firewall scripts
 RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     curl \
+    nftables \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -103,6 +104,8 @@ stderr_logfile=/var/log/supervisor/backend.err.log
 stdout_logfile=/var/log/supervisor/backend.out.log
 directory=/app/backend
 environment=PYTHONUNBUFFERED="1"
+; Pass all environment variables to the backend process
+; Supervisor will inherit environment from the parent process
 
 [program:nginx]
 command=/usr/sbin/nginx -g "daemon off;"

@@ -6,7 +6,8 @@ import {
   FiAlertTriangle, 
   FiActivity,
   FiCheckCircle,
-  FiXCircle
+  FiXCircle,
+  FiLock
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import api from '../services/api';
@@ -75,6 +76,17 @@ const Dashboard = () => {
     }
   };
 
+  const handleAcknowledge = async (alertId: string) => {
+    try {
+      await api.patch(`/alerts/${alertId}/acknowledge`);
+      setRecentAlerts(prev => prev.map(a => 
+        a._id === alertId ? { ...a, acknowledged: true } : a
+      ));
+    } catch (error) {
+      // ignore silently for dashboard
+    }
+  };
+
   const handleToggleBlock = async (e: React.MouseEvent, device: Device) => {
     e.preventDefault();
     e.stopPropagation();
@@ -133,7 +145,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatsCard
           title="Total Devices"
           value={devices.length}
@@ -142,21 +154,15 @@ const Dashboard = () => {
         />
         <StatsCard
           title="Active Alerts"
-          value={recentAlerts.length}
+          value={recentAlerts.filter(a => !a.acknowledged).length}
           icon={FiAlertTriangle}
           color="red"
         />
         <StatsCard
           title="Blocked Devices"
           value={devices.filter(d => d.is_blocked).length}
-          icon={FiShield}
+          icon={FiLock}
           color="orange"
-        />
-        <StatsCard
-          title="Network Status"
-          value="Secure"
-          icon={FiCheckCircle}
-          color="green"
         />
       </div>
 
@@ -224,8 +230,13 @@ const Dashboard = () => {
             recentAlerts.map((alert) => (
               <div 
                 key={alert._id} 
-                onClick={() => setSelectedAlert(alert)}
-                className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => {
+                    handleAcknowledge(alert._id);
+                    setSelectedAlert(alert);
+                }}
+                className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                    alert.acknowledged ? 'bg-gray-50 opacity-60' : 'bg-white'
+                }`}
               >
                 <div className="flex items-start gap-4">
                   <div className={`p-2 rounded-lg ${
@@ -238,7 +249,12 @@ const Dashboard = () => {
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium text-gray-900">{alert.reason}</h3>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-medium text-gray-900">{alert.reason}</h3>
+                            {!alert.acknowledged && (
+                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" title="New Alert"></span>
+                            )}
+                        </div>
                         <p className="text-sm text-gray-500">
                           Device: {alert.device_name}
                         </p>

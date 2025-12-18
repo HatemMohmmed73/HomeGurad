@@ -26,9 +26,9 @@ services:
     image: gameover9600/homeguard:latest
     container_name: homeguard-allinone
     restart: unless-stopped
-    ports:
-      - "80:80"        # Frontend (Nginx)
-      - "8000:8000"    # Backend (FastAPI)
+    network_mode: host  # Required for nftables to access host network stack
+    privileged: true  # Required for nftables to modify host firewall rules
+    user: root  # Ensure container runs as root for nftables access
     depends_on:
       mongodb:
         condition: service_healthy
@@ -36,9 +36,11 @@ services:
       - ENV=production
       - DEBUG=False
       - SECRET_KEY=homeguard-secret-key-change-in-production
-      - MONGODB_URL=mongodb://admin:homeguard123@mongodb:27017/?authSource=admin
+      - ACCESS_TOKEN_EXPIRE_MINUTES=10080
+      - MONGODB_URL=mongodb://admin:homeguard123@localhost:27017/?authSource=admin
       - DATABASE_NAME=homeguard
-      - DEVICES_FILE_PATH=/data/devices.json
+      - DEVICES_FILE_PATH=/data/active_devices.json
+      - DEVICES_METADATA_FILE_PATH=/data/devices.json
       - ALERTS_FILE_PATH=/data/alerts.json
       # Email Settings
       - EMAIL_HOST=smtp.gmail.com
@@ -56,7 +58,9 @@ services:
     volumes:
       - ./backend:/app/backend
       - ./data/devices.json:/data/devices.json:ro
+      - ./data/active_devices.json:/data/active_devices.json:ro
       - ./data/alerts.json:/data/alerts.json:ro
+      - /home/orangepi/scripts:/scripts:ro  # Mount firewall scripts
 
 volumes:
   homeguard_data:

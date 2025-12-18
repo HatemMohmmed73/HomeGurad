@@ -50,18 +50,38 @@ def _load_alerts_from_file(file_path: str) -> Optional[List[AlertResponse]]:
         return None
 
     try:
-        raw_data = json.loads(path.read_text(encoding="utf-8"))
+        # Try to parse as JSON first (array or single object)
+        try:
+            raw_data = json.loads(path.read_text(encoding="utf-8"))
+            # Handle both single object and array formats
+            if isinstance(raw_data, dict):
+                raw_alerts = [raw_data]
+            elif isinstance(raw_data, list):
+                raw_alerts = raw_data
+            else:
+                logger.error("Alerts file must contain a JSON object or array, got %s", type(raw_data))
+                return None
+        except json.JSONDecodeError:
+            # If JSON parsing fails, try JSONL format (one JSON object per line)
+            logger.info("Trying JSONL format (one JSON object per line)")
+            raw_alerts = []
+            with open(path, 'r', encoding='utf-8') as f:
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:  # Skip empty lines
+                        continue
+                    try:
+                        alert_obj = json.loads(line)
+                        raw_alerts.append(alert_obj)
+                    except json.JSONDecodeError:
+                        logger.warning("Skipping invalid JSON on line %d", line_num)
+                        continue
+            
+            if not raw_alerts:
+                logger.error("No valid alerts found in JSONL format")
+                return None
     except Exception as exc:  # pragma: no cover
         logger.error("Failed to read alerts file %s: %s", file_path, exc)
-        return None
-
-    # Handle both single object and array formats
-    if isinstance(raw_data, dict):
-        raw_alerts = [raw_data]
-    elif isinstance(raw_data, list):
-        raw_alerts = raw_data
-    else:
-        logger.error("Alerts file must contain a JSON object or array, got %s", type(raw_data))
         return None
 
     results: List[AlertResponse] = []
@@ -155,11 +175,9 @@ async def get_alerts(
     current_user: dict = Depends(get_current_user)
 ):
     """Get all alerts with optional filters"""
-    if settings.ALERTS_FILE_PATH:
-        file_alerts = _filter_file_alerts(severity, device_id, days, limit)
-        if file_alerts is not None:
-            return file_alerts
-
+    # Note: We now sync file alerts to MongoDB in alert_monitor.py, so we ALWAYS read from DB
+    # to support features like 'acknowledged' status.
+    
     alerts_collection = get_alerts_collection()
     
     # Build query
@@ -181,9 +199,24 @@ async def get_alerts(
     # Fetch alerts
     alerts = await alerts_collection.find(query).sort("timestamp", -1).limit(limit).to_list(length=limit)
     
-    # Convert ObjectId to string
+    # Fallback: If MongoDB is empty, try loading from file
+    if not alerts and settings.ALERTS_FILE_PATH:
+        logger.warning("MongoDB alerts collection is empty, falling back to file-based alerts")
+        file_alerts = _filter_file_alerts(severity, device_id, days, limit)
+        if file_alerts:
+            # Convert AlertResponse objects to dicts for return
+            alerts = [alert.dict() for alert in file_alerts]
+            logger.info(f"Loaded {len(alerts)} alerts from file as fallback")
+    
+    # Normalize severity values and convert ObjectId to string
     for alert in alerts:
-        alert["_id"] = str(alert["_id"])
+        # Normalize severity to lowercase (fixes "High" -> "high")
+        if "severity" in alert:
+            alert["severity"] = _parse_severity(alert["severity"]).value
+        
+        # Convert ObjectId to string
+        if isinstance(alert.get("_id"), dict) or (hasattr(alert.get("_id"), "__str__") and not isinstance(alert.get("_id"), str)):
+            alert["_id"] = str(alert["_id"])
     
     return alerts
 
@@ -191,27 +224,31 @@ async def get_alerts(
 @router.patch("/{alert_id}/acknowledge")
 async def acknowledge_alert(alert_id: str, current_user: dict = Depends(get_current_user)):
     """Mark an alert as acknowledged"""
-    if settings.ALERTS_FILE_PATH:
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Acknowledging alerts is not supported in file-backed mode"
-        )
+    # File-backed mode support removed (now synced to DB)
 
     alerts_collection = get_alerts_collection()
     
     from bson import ObjectId
+    query_id = alert_id
     try:
-        obj_id = ObjectId(alert_id)
+        if ObjectId.is_valid(alert_id):
+            query_id = ObjectId(alert_id)
     except:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid alert ID"
-        )
+        pass # Keep as string if not valid ObjectId
     
     result = await alerts_collection.update_one(
-        {"_id": obj_id},
+        {"_id": query_id},
         {"$set": {"acknowledged": True}}
     )
+    
+    if result.matched_count == 0:
+        # Try the other type if first attempt failed (e.g. string vs ObjectId mismatch)
+        alt_id = ObjectId(alert_id) if not isinstance(query_id, ObjectId) and ObjectId.is_valid(alert_id) else alert_id
+        if alt_id != query_id:
+             result = await alerts_collection.update_one(
+                {"_id": alt_id},
+                {"$set": {"acknowledged": True}}
+            )
     
     if result.matched_count == 0:
         raise HTTPException(
@@ -228,11 +265,7 @@ async def get_alert_stats(
     current_user: dict = Depends(get_current_user)
 ):
     """Get alert statistics"""
-    if settings.ALERTS_FILE_PATH:
-        file_stats = _file_alert_stats(days)
-        if file_stats is not None:
-            return file_stats
-
+    # Always use MongoDB stats
     alerts_collection = get_alerts_collection()
     
     start_date = datetime.utcnow() - timedelta(days=days)

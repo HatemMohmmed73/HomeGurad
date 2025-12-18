@@ -18,21 +18,33 @@ from core.alert_monitor import alert_monitor
 async def lifespan(app: FastAPI):
     """Manage app startup and shutdown"""
     # Startup
+    import sys
+    print("🚀 FastAPI lifespan: Starting...", flush=True)
+    sys.stdout.flush()
     try:
+        print("🔌 Connecting to database...", flush=True)
         await connect_db()
+        print("✅ Database connected, starting alert monitor...", flush=True)
         # Start alert monitoring (non-blocking, don't fail if it errors)
         try:
+            print("📡 Calling alert_monitor.start()...", flush=True)
             await alert_monitor.start()
+            print("✅ Alert monitor start() completed", flush=True)
         except Exception as e:
-            print(f"⚠️  Warning: Alert monitoring failed to start: {e}")
+            print(f"⚠️  Warning: Alert monitoring failed to start: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
+            sys.stdout.flush()
             # Don't crash the app if monitoring fails
     except Exception as e:
-        print(f"❌ Error during startup: {e}")
+        print(f"❌ Error during startup: {e}", flush=True)
         import traceback
         traceback.print_exc()
+        sys.stdout.flush()
         raise
     yield
     # Shutdown
+    print("🛑 FastAPI lifespan: Shutting down...", flush=True)
     alert_monitor.monitoring = False
     await close_db()
 
